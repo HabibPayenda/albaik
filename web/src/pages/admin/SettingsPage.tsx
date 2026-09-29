@@ -386,7 +386,7 @@ export default function SettingsPage() {
                       row.key === 'contact.email'
                         ? 'This is the address shown publicly. Notifications are sent to the address in the mail server settings below.'
                         : row.key === 'contact.mapEmbed'
-                          ? 'Paste the src URL from Google Maps → Share → Embed a map.'
+                          ? 'Paste the src URL from Google Maps → Share → Embed a map, or the whole embed code — either works.'
                           : row.key === 'catalog.priceOnRequest'
                             ? 'Shown in place of a price when a product has none set.'
                             : undefined

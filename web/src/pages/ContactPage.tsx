@@ -13,6 +13,7 @@ import { Button, ButtonAnchor } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Reveal } from '@/components/ui/Reveal'
 import { EASE } from '@/lib/motion'
+import { mapEmbedSrc } from '@/lib/mapEmbed'
 import { cn } from '@/lib/utils'
 
 interface FormState {
@@ -64,6 +65,9 @@ export function ContactPage() {
   const isWholesale = params.get('topic') === 'wholesale'
   const productSlug = params.get('product') ?? ''
   const isProductEnquiry = Boolean(productSlug) && !isWholesale
+
+  // Accepts either the embed URL or Google's whole `<iframe>` snippet — see the helper.
+  const mapSrc = mapEmbedSrc(settings.mapEmbed)
 
   useDocumentTitle(
     isProductEnquiry ? `Product enquiry — ${settings.siteName}` : `Contact — ${settings.siteName}`,
@@ -364,12 +368,12 @@ export function ContactPage() {
                 </div>
               </Reveal>
 
-              {settings.mapEmbed ? (
+              {mapSrc ? (
                 <Reveal direction="right" delay={0.08}>
                   <div className="overflow-hidden rounded-3xl border border-outline-variant/30 shadow-e1">
                     <iframe
                       title="Albaik head office location"
-                      src={settings.mapEmbed}
+                      src={mapSrc}
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                       className="h-64 w-full border-0"
