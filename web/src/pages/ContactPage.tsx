@@ -368,21 +368,7 @@ export function ContactPage() {
                 </div>
               </Reveal>
 
-              {mapSrc ? (
-                <Reveal direction="right" delay={0.08}>
-                  <div className="overflow-hidden rounded-3xl border border-outline-variant/30 shadow-e1">
-                    <iframe
-                      title="Albaik head office location"
-                      src={mapSrc}
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      className="h-64 w-full border-0"
-                    />
-                  </div>
-                </Reveal>
-              ) : null}
-
-              <Reveal direction="right" delay={0.12}>
+              <Reveal direction="right" delay={0.08}>
                 <div className="rounded-3xl border border-white/10 bg-royal-gradient p-space-lg text-white shadow-e2">
                   <span className="eyebrow text-accent-gold">Distributors & retailers</span>
                   <h3 className="mt-2 font-display text-headline-sm font-semibold">
@@ -420,6 +406,23 @@ export function ContactPage() {
                 </div>
               </Reveal>
             </div>
+
+            {/* Full-width location band: kept out of the right-hand column so the map
+                does not stretch it past the form and leave dead space beside the
+                partner card. */}
+            {mapSrc ? (
+              <Reveal className="lg:col-span-12" direction="up" delay={0.08}>
+                <div className="overflow-hidden rounded-3xl border border-outline-variant/30 shadow-e1">
+                  <iframe
+                    title="Albaik head office location"
+                    src={mapSrc}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="h-64 w-full border-0 lg:h-80"
+                  />
+                </div>
+              </Reveal>
+            ) : null}
           </div>
         </Container>
       </Section>
