@@ -13,7 +13,7 @@ import { Button, ButtonAnchor } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Reveal } from '@/components/ui/Reveal'
 import { EASE } from '@/lib/motion'
-import { mapEmbedSrc } from '@/lib/mapEmbed'
+import { mapDirectionsUrl, mapEmbedSrc } from '@/lib/mapEmbed'
 import { cn } from '@/lib/utils'
 
 interface FormState {
@@ -68,6 +68,7 @@ export function ContactPage() {
 
   // Accepts either the embed URL or Google's whole `<iframe>` snippet — see the helper.
   const mapSrc = mapEmbedSrc(settings.mapEmbed)
+  const directionsHref = mapDirectionsUrl(settings.mapEmbed, settings.address)
 
   useDocumentTitle(
     isProductEnquiry ? `Product enquiry — ${settings.siteName}` : `Contact — ${settings.siteName}`,
@@ -425,17 +426,17 @@ export function ContactPage() {
                         </span>
                       </span>
                     </div>
-                    <ButtonAnchor
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        settings.address || 'Albaik Group of Companies',
-                      )}`}
-                      target="_blank"
-                      variant="outline"
-                      size="sm"
-                      iconRight="north_east"
-                    >
-                      Get directions
-                    </ButtonAnchor>
+                    {directionsHref ? (
+                      <ButtonAnchor
+                        href={directionsHref}
+                        target="_blank"
+                        variant="outline"
+                        size="sm"
+                        iconRight="north_east"
+                      >
+                        Get directions
+                      </ButtonAnchor>
+                    ) : null}
                   </div>
                   <iframe
                     title="Albaik head office location"
