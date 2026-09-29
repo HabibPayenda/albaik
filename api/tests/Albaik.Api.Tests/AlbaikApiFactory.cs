@@ -14,6 +14,7 @@ namespace Albaik.Api.Tests;
 public class AlbaikApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbPath;
+    private readonly string _webRoot;
     private readonly bool _keepDatabase;
 
     /// <summary>
@@ -31,6 +32,10 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
     {
         _dbPath = dbPath ?? Path.Combine(Path.GetTempPath(), $"albaik-tests-{Guid.NewGuid():N}.db");
         _keepDatabase = keepDatabase;
+        // Uploads write under the web root; point it at a throwaway directory so a test
+        // never leaves files in the real wwwroot/uploads.
+        _webRoot = Path.Combine(Path.GetTempPath(), $"albaik-tests-webroot-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_webRoot);
     }
 
     private Lazy<string>? _token;
@@ -45,6 +50,7 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
         // and the developer's albaik.db.
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
         builder.UseSetting("Jwt:Key", "test-signing-key-at-least-32-bytes-long-0123456789");
+        builder.UseWebRoot(_webRoot);
     }
 
     /// <summary>
@@ -75,6 +81,11 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
         if (disposing && !_keepDatabase && File.Exists(_dbPath))
         {
             try { File.Delete(_dbPath); }
+            catch (IOException) { }
+        }
+        if (disposing && Directory.Exists(_webRoot))
+        {
+            try { Directory.Delete(_webRoot, recursive: true); }
             catch (IOException) { }
         }
     }

@@ -79,6 +79,10 @@ export const endpoints = {
     products: '/admin/products',
     product: (id: number) => `/admin/products/${id}`,
     upload: '/admin/upload',
+    // Product photographs must be exactly 1080×1350; this route enforces it, while the
+    // general route above still accepts collection, brand and section artwork.
+    // See docs/adr/0006-product-images-are-framed-4-5.md.
+    productUpload: '/admin/upload/product',
     // Separate route with hero-sized ceilings, so a backdrop is not squeezed into the
     // product-card limits. See docs/adr/0002-backdrop-upload-route.md.
     backdropUpload: '/admin/upload/backdrop',

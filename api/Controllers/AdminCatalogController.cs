@@ -224,6 +224,24 @@ public class AdminCatalogController : ControllerBase
         => Store(file, ImagePipeline.Limits.Product, "uploads", ct);
 
     /// <summary>
+    /// Stores a product photograph. A product image is framed 4:5 and shown whole, so this
+    /// route accepts only exactly 1080×1350 and rejects every other size — what an editor
+    /// stores is then always the dimensions the Product frame is designed for.
+    ///
+    /// Separate route from <see cref="Upload"/>, which stays the general catalogue-image
+    /// route (collection, brand and section artwork also use it), on the same reasoning as
+    /// the backdrop route: the size guarantee belongs to the route, not to a
+    /// caller-supplied argument. See docs/adr/0006-product-images-are-framed-4-5.md.
+    /// </summary>
+    [HttpPost("upload/product")]
+    [RequestSizeLimit(24 * 1024 * 1024)]
+    public Task<ActionResult<object>> UploadProductPhoto(IFormFile file, CancellationToken ct)
+        => Store(file, ImagePipeline.Limits.Product, "uploads", ct, ProductPhotoSize);
+
+    /// <summary>The one accepted product-image size — 4:5, matching the Product frame.</summary>
+    private static readonly (int Width, int Height) ProductPhotoSize = (1080, 1350);
+
+    /// <summary>
     /// Stores an uploaded hero backdrop under wwwroot/uploads/backdrops.
     ///
     /// Separate route on purpose. A backdrop is shown at viewport width, so it needs a
@@ -243,7 +261,8 @@ public class AdminCatalogController : ControllerBase
         IFormFile file,
         ImagePipeline.Limits limits,
         string folder,
-        CancellationToken ct)
+        CancellationToken ct,
+        (int Width, int Height)? exactSize = null)
     {
         if (file is null || file.Length == 0) return BadRequest(new { message = "No file was uploaded." });
 
@@ -263,6 +282,17 @@ public class AdminCatalogController : ControllerBase
         // so reject rather than accept something the pipeline cannot vouch for.
         if (!result.Transcoded && !IsPassthrough(ext))
             return BadRequest(new { message = $"'{file.FileName}' could not be decoded as an image. Try re-exporting it as JPEG or PNG." });
+
+        // A route that demands one exact size (the product photograph) rejects anything
+        // else here, before it is stored, so the site never receives a product image that
+        // does not match the Product frame.
+        if (exactSize is { } size && (result.Width != size.Width || result.Height != size.Height))
+            return BadRequest(new
+            {
+                message = result.Width > 0 && result.Height > 0
+                    ? $"Product images must be exactly {size.Width}×{size.Height} (4:5). This one is {result.Width}×{result.Height}."
+                    : $"Product images must be exactly {size.Width}×{size.Height} (4:5), and this file's dimensions could not be read."
+            });
 
         if (result.ExceedsCeiling(limits.MaxBytes))
             return BadRequest(new

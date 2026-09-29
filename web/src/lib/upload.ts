@@ -5,14 +5,53 @@ export interface UploadedImage {
 }
 
 /**
- * Which upload route an image goes to. `product` uses the catalogue ceilings (300 KB,
- * 1600px longest edge); `backdrop` uses the hero ceilings, because a backdrop is
- * displayed at viewport width and the product limits are sized for a card.
+ * Which upload route an image goes to.
+ *
+ * - `product` — the general catalogue route (300 KB, 1600px longest edge): collection,
+ *   brand and section artwork.
+ * - `product-photo` — a product photograph, which the route accepts only at exactly
+ *   1080×1350 (see docs/adr/0006-product-images-are-framed-4-5.md).
+ * - `backdrop` — the hero ceilings, because a backdrop is displayed at viewport width and
+ *   the product limits are sized for a card.
  */
-export type UploadKind = 'product' | 'backdrop'
+export type UploadKind = 'product' | 'product-photo' | 'backdrop'
 
 function uploadEndpoint(kind: UploadKind): string {
-  return kind === 'backdrop' ? endpoints.admin.backdropUpload : endpoints.admin.upload
+  if (kind === 'backdrop') return endpoints.admin.backdropUpload
+  if (kind === 'product-photo') return endpoints.admin.productUpload
+  return endpoints.admin.upload
+}
+
+/** The one accepted product-image size — 4:5, matching the Product frame. */
+export const PRODUCT_PHOTO = { width: 1080, height: 1350 } as const
+
+/** Read an image's natural pixel size from a URL or object URL. */
+export function readImageSize(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
+    image.onerror = () => reject(new Error('The image could not be loaded.'))
+    image.src = src
+  })
+}
+
+/** Message for an image that is not exactly the product-photo size, or null when it is. */
+export function productPhotoSizeError(width: number, height: number): string | null {
+  if (width === PRODUCT_PHOTO.width && height === PRODUCT_PHOTO.height) return null
+  return `Product images must be exactly ${PRODUCT_PHOTO.width}×${PRODUCT_PHOTO.height} (4:5). This one is ${width}×${height}.`
+}
+
+/** Check a chosen file's dimensions before it is uploaded. */
+export async function fileProductPhotoError(file: File): Promise<string | null> {
+  const url = URL.createObjectURL(file)
+  try {
+    const { width, height } = await readImageSize(url)
+    return productPhotoSizeError(width, height)
+  } catch {
+    return 'That file could not be read as an image.'
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 /**

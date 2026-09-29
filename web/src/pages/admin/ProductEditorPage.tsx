@@ -577,6 +577,7 @@ export default function ProductEditorPage() {
                     <Field label="Primary image" htmlFor="p-image" hint="Choose a file, or paste a URL.">
                       <ImageField
                         id="p-image"
+                        kind="product-photo"
                         value={form.imageUrl ?? ''}
                         onChange={(url) => set('imageUrl', url)}
                       />
@@ -651,7 +652,7 @@ export default function ProductEditorPage() {
                                 alt={image.alt}
                                 name={form.name || 'Product'}
                                 zoomOnHover={false}
-                                className="size-12 shrink-0 rounded-lg"
+                                className="aspect-[4/5] w-10 shrink-0 rounded-lg"
                               />
                               <TextInput
                                 value={image.url}

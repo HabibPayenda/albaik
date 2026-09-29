@@ -84,7 +84,7 @@ export default function ProductsPage() {
             accentFrom={row.accentFrom}
             accentTo={row.accentTo}
             zoomOnHover={false}
-            className="size-11 shrink-0 rounded-lg"
+            className="aspect-[4/5] w-9 shrink-0 rounded-lg"
           />
           <div className="flex min-w-0 flex-col">
             <span className="truncate font-semibold text-on-surface">{row.name}</span>

@@ -24,12 +24,13 @@ catalogue look uneven.
 Consequences worth remembering. The home and catalogue grids grow taller; the "density is
 the point" note in the card is superseded, and the column counts were left unchanged
 (4-up at `xl`) so the page does not grow further. Uploads are gated rather than merely
-guided: the API upload route — mirrored by a pre-check in the admin field, including for
-pasted URLs — accepts only exactly **1080×1350** and rejects every other size, so what an
-editor stores is exactly what the frame shows; the rule is stated on the field as
-"1080×1350 (4:5)". The seeded photography predates the rule and is left in place — three
-`1400×933`, four `1128×1400`, one `1400×1400` — so those images show margins until they
-are replaced. Only one stored file per image is generated (the pipeline preserves aspect
-ratio, never upscales, and a 1080×1350 upload is under its 1600px longest-edge ceiling, so
-the stored dimensions are 1080×1350 exactly); serving a card-sized derivative via
-`srcset` is a known, deferred follow-up rather than part of this decision.
+guided: a product-photo upload route of its own — so the general catalogue route keeps
+accepting collection, brand and section artwork — accepts only exactly **1080×1350** and
+rejects every other size, mirrored by a pre-check in the admin field for chosen files and
+for pasted URLs, so what an editor stores is exactly what the frame shows; the rule is
+stated on the field as "1080×1350 (4:5)". The seeded photography predates the rule and is
+left in place — three `1400×933`, four `1128×1400`, one `1400×1400` — so those images show
+margins until they are replaced. Only one stored file per image is generated (the pipeline
+preserves aspect ratio, never upscales, and a 1080×1350 upload is under its 1600px
+longest-edge ceiling, so the stored dimensions are 1080×1350 exactly); serving a card-sized
+derivative via `srcset` is a known, deferred follow-up rather than part of this decision.
