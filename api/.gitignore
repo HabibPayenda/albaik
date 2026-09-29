@@ -1,0 +1,22 @@
+## Build output
+bin/
+obj/
+*.user
+
+## Local database — this holds live content once the site is in use.
+## Never commit it; back it up instead.
+albaik.db
+albaik.db-shm
+albaik.db-wal
+
+## Operator-uploaded product photography and logos.
+## Keep the folder, drop the files.
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
+
+## Local overrides (SMTP credentials, production JWT key, real connection string)
+appsettings.Development.json
+appsettings.Local.json
+
+## Mail captured by tools/smtp-sink.py while testing the contact form
+tools/captured-mail/

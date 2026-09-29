@@ -1,0 +1,44 @@
+# Windows
+Thumbs.db
+desktop.ini
+~$*
+
+# Node / Vite
+node_modules/
+web/dist/
+web/.vite/
+
+# .NET build output
+**/bin/
+**/obj/
+*.user
+
+# Local databases, seeds and backups (the SQLite DB holds live content)
+*.db
+*.db-shm
+*.db-wal
+*.db.bak-*
+*.sqlite
+
+# Generated SPA bundle the API serves (copies of web/dist + web/public)
+api/wwwroot/
+
+# Working / artifact folders
+.workbuddy-ai/
+snapshots/
+AlbaikDesign/
+
+# Large deliverables & subject-matter source documents
+*.zip
+*.docx
+*.rar
+
+# Design snapshots & crop annotations in the repo / web roots
+/hero-*.png
+/hero-*.rects.json
+/home-*.png
+/web/*.png
+/web/*.rects.json
+
+# Local API overrides carrying real credentials
+appsettings.Local.json
