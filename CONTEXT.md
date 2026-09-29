@@ -30,6 +30,13 @@ One sellable formulation, belonging to exactly one brand in exactly one
 collection.
 _Avoid_: Item, SKU, formulation.
 
+**Product frame**:
+The fixed frame a product image is shown in — the same 4:5 shape on every
+surface, and it never crops. A correctly prepared photograph is shown whole, so
+the same file appears identically on a card, in the gallery, in a thumbnail and
+in the dashboard.
+_Avoid_: Image box, image stage, aspect ratio.
+
 ### Home page
 
 **Home section**:
@@ -67,8 +74,9 @@ _Avoid_: Trust badge, ribbon, tag.
 
 **Product plate**:
 The branded gradient panel that stands in for a product that has no
-photography. It appears on cards and detail pages wherever a product image is
-expected and none exists, and never in the hero.
+photography. It fills the same Product frame as a photograph and appears on
+cards and detail pages wherever a product image is expected and none exists, and
+never in the hero.
 _Avoid_: Placeholder, placeholder image, skeleton.
 
 **Trust pillar**:
