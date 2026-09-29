@@ -8,6 +8,10 @@ import { accentGradient, cn } from '@/lib/utils'
  * No product photography ships with the source material, so when a product has no
  * image we render a branded gradient plate instead of a broken <img>. The admin can
  * upload real photography per product, which then takes over automatically.
+ *
+ * The photo is fitted, never cropped — the whole product must be visible inside the
+ * Product frame, so `object-contain` is the default and callers only set the frame's
+ * size (4:5 everywhere). See docs/adr/0006-product-images-are-framed-4-5.md.
  */
 export function ProductImage({
   src,
@@ -49,7 +53,7 @@ export function ProductImage({
           decoding="async"
           onError={() => setFailed(true)}
           className={cn(
-            'size-full object-cover object-center transition-transform duration-700 ease-out',
+            'size-full object-contain object-center transition-transform duration-700 ease-out',
             zoomOnHover && 'group-hover:scale-105',
             imageClassName,
           )}

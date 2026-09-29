@@ -11,6 +11,7 @@ import { cn, debounce } from '@/lib/utils'
 import { resolveSuggestions, SEARCH_SUGGESTIONS_KEY } from '@/lib/searchSuggestions'
 import type { Paginated, ProductCard as ProductCardModel } from '@/lib/types'
 import { Icon } from '@/components/ui/Icon'
+import { ProductImage } from '@/components/ui/ProductImage'
 import { EASE } from '@/lib/motion'
 
 export function SearchOverlay() {
@@ -176,25 +177,17 @@ export function SearchOverlay() {
                           'flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-surface-container-low',
                         )}
                       >
-                        {/* Same accent gradient as the product plate, and the same problem:
-                            `accentFrom`/`accentTo` are free-text hex fields, so the gold
-                            icon cannot rely on the backdrop being dark. On a gold accent
-                            (the seeded #8a6d1f -> #d4af37) `accent-gold-light` on it is
-                            1.70:1 — the glyph simply disappears. The scrim fixes it for any
-                            accent an admin can type, and matches ProductImage's plate so the
-                            two read as the same artwork. */}
-                        <span
-                          className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg text-white"
-                          style={{
-                            backgroundImage: `linear-gradient(140deg, ${product.accentFrom ?? '#050d24'}, ${product.accentTo ?? '#0e3b9c'})`,
-                          }}
-                        >
-                          <span
-                            className="absolute inset-0 bg-gradient-midnight/65"
-                            aria-hidden="true"
-                          />
-                          <Icon name="spa" size={18} className="relative text-accent-gold-light" />
-                        </span>
+                        {/* The Product frame: the product's own photograph, or its plate
+                            when none exists — not a stand-in glyph. */}
+                        <ProductImage
+                          src={product.imageUrl}
+                          alt={product.name}
+                          name={product.name}
+                          accentFrom={product.accentFrom}
+                          accentTo={product.accentTo}
+                          zoomOnHover={false}
+                          className="aspect-[4/5] w-10 shrink-0 rounded-lg"
+                        />
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate text-body-sm font-semibold text-on-surface">{product.name}</span>
                           <span className="truncate text-label-md uppercase tracking-wider text-on-surface-variant">

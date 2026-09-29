@@ -20,24 +20,14 @@ export interface ProductCardProps {
 /**
  * The product tile.
  *
- * **Density is the point.** The previous revision used a 4:5 image stage, `space-lg`
- * interior padding, a 24px display title, a two-line description, three chips and a
- * full-width action row — which measured roughly 700–760px tall. One row filled the
- * viewport and a visitor had to scroll to discover the range at all, which reads as a
- * slow, thin catalogue rather than a premium one.
- *
- * This version is built to fit **two rows in a laptop viewport** (~780px of usable
- * height at 900px after the header):
- *
- *   image     aspect-[4/3] instead of 4:5      -> -20% height
- *   padding   space-sm -> space-md             -> -16px
- *   title     headline-sm (20px), one line
- *   body      one line, clamped
- *   chips     at most two
- *   action    compact button, not a full row
- *
- * The grid that renders these uses up to four columns on wide screens, so the tiles
- * stay around 380px tall — two rows to a fold.
+ * The image stage is a 4:5 Product frame showing the whole photograph (`object-contain`,
+ * never cropped), so a 1080×1350 product image appears exactly as shot. This supersedes
+ * the earlier "two rows per laptop viewport" goal: the frame used to be a 16:10 landscape
+ * stage cropped to fill, which cut a 4:5 photo roughly in half, and a portrait frame is
+ * necessarily taller. Density is still managed everywhere else — `space-md` padding, a
+ * single-line title, no description, at most two chips and a compact action button — and
+ * the grid keeps up to four columns on wide screens, so the page grows in length, not in
+ * clutter. See docs/adr/0006-product-images-are-framed-4-5.md.
  *
  * No `variants` prop on purpose: this card is reused in grids, carousels and related
  * rows, and a variant contract only resolves inside a matching parent — anywhere else
@@ -78,7 +68,7 @@ export function ProductCard({
           accentFrom={product.accentFrom}
           accentTo={product.accentTo}
           priority={priority}
-          className="mb-space-sm aspect-[16/10] w-full rounded-xl"
+          className="mb-space-sm aspect-[4/5] w-full rounded-xl"
         />
 
         {product.badge ? (
@@ -162,7 +152,7 @@ export function ProductCardSkeleton({ compact = false }: { compact?: boolean }) 
         compact ? 'p-space-sm' : 'p-3.5 md:p-space-md',
       )}
     >
-      <div className="skeleton mb-space-sm aspect-[16/10] w-full rounded-xl" />
+      <div className="skeleton mb-space-sm aspect-[4/5] w-full rounded-xl" />
       <div className="flex flex-col gap-2.5">
         <div className="skeleton h-2.5 w-1/3" />
         <div className="skeleton h-4 w-3/4" />
