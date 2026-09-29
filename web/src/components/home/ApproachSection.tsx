@@ -10,27 +10,31 @@ import { cn } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
 import type { HomeSection } from '@/lib/types'
 
-type IconKey = React.ComponentProps<typeof Icon>['name']
+/** Icon drawn when a pillar was saved with no icon, so a half-built row never looks broken. */
+const PILLAR_FALLBACK_ICON = 'verified_user'
 
-/**
- * docx §2's five "Our Approach" pillars, chosen by position. The copy itself comes from
- * the CMS (`section.dataJson.pillars`) — see `set-approach-pillars.mjs`.
- */
-const PILLAR_ICONS: IconKey[] = ['science', 'inventory_2', 'workspace_premium', 'info', 'spa']
+/** Icon tint per pillar accent — the dashboard's "Accent colour" field. */
+const ACCENT_ICON: Record<string, string> = {
+  gold: 'text-accent-gold',
+  teal: 'text-marine',
+  secondary: 'text-secondary',
+  primary: 'text-primary',
+}
 
 /**
  * "Our Approach", in two bands.
  *
- * The section used to be one crowded grid: a diagnostic panel with a sentence-splitter
- * stapled underneath it. The splitter was the problem — `body` is a single compound
- * sentence, so `split('.')` produced one fragment and the section rendered exactly one
- * card, while the five pillars docx §2 actually names went unused.
+ * Band A presents the trust pillars — the dashboard-editable rows from the "Trust
+ * pillars" tab (icon, headline, supporting line). The glyph is data, not a fixed
+ * position mapping, so staff can add, remove, reorder or re-icon a pillar without a
+ * redeploy; a row saved without an icon falls back to a neutral one.
  *
- * Now band A presents those five pillars, and band B keeps the interactive profile
- * selector with room to breathe. The selector is a *chooser*: the cards carry the title
- * and badge, the panel carries the description. Nothing is repeated.
+ * Band B keeps the interactive profile selector with room to breathe. The selector is a
+ * *chooser*: the cards carry the title and badge, the panel carries the description.
+ * Nothing is repeated.
  */
 export function ApproachSection({ section }: { section?: HomeSection }) {
+  const pillars = useAppSelector((state) => state.home.data?.trustPillars ?? [])
   const profiles = useAppSelector((state) => state.home.data?.hairProfiles ?? [])
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
@@ -47,31 +51,11 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
     profiles.findIndex((p) => p.key === selected?.key),
   )
 
-  /** The pillars live in `dataJson`; fall back to sentence-splitting if it is cleared. */
-  const pillars = useMemo(() => {
-    const raw = section?.dataJson
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as { pillars?: unknown }
-        if (Array.isArray(parsed.pillars) && parsed.pillars.every((p) => typeof p === 'string')) {
-          return parsed.pillars as string[]
-        }
-      } catch {
-        // Malformed JSON in the CMS field — fall through to the body-derived list.
-      }
-    }
-    return (section?.body ?? '')
-      .split(/(?<=\.)\s+/)
-      .map((s) => s.trim().replace(/\.$/, ''))
-      .filter((s) => s.length > 24)
-      .slice(0, 5)
-  }, [section?.dataJson, section?.body])
-
   if (!pillars.length && !profiles.length) return null
 
   return (
     <>
-      {/* ================================================ A — the five pillars */}
+      {/* ================================================ A — the trust pillars */}
       {pillars.length ? (
         <Section id="product-approach" tone="low">
           <Container>
@@ -90,28 +74,36 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
               />
               <Stagger
                 as="ol"
-                className="relative grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-5"
+                className="relative grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-4"
                 delay={0.09}
               >
                 {pillars.map((pillar, index) => (
                   <StaggerItem
                     as="li"
-                    key={pillar}
+                    key={pillar.id}
                     className="group flex flex-col items-center gap-space-sm text-center"
                   >
                     <span className="relative z-10 flex size-[5.5rem] shrink-0 items-center justify-center rounded-full border border-outline-variant/60 bg-clinical-white shadow-e1 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-secondary/40 group-hover:shadow-e2">
                       <Icon
-                        name={PILLAR_ICONS[index] ?? 'check_circle'}
+                        name={pillar.icon?.trim() || PILLAR_FALLBACK_ICON}
                         size={26}
-                        className="text-primary-container transition-colors duration-300 group-hover:text-accent-gold"
+                        className={cn(
+                          ACCENT_ICON[pillar.accent ?? 'secondary'] ?? ACCENT_ICON.secondary,
+                          'transition-colors duration-300',
+                        )}
                       />
                       <span className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-gold-gradient font-display text-label-sm font-bold text-gradient-midnight shadow-sm">
                         {index + 1}
                       </span>
                     </span>
                     <p className="max-w-[16rem] font-display text-body-md font-semibold leading-snug text-on-surface">
-                      {pillar}
+                      {pillar.title}
                     </p>
+                    {pillar.subtitle ? (
+                      <p className="max-w-[16rem] text-body-sm leading-relaxed text-on-surface-variant">
+                        {pillar.subtitle}
+                      </p>
+                    ) : null}
                   </StaggerItem>
                 ))}
               </Stagger>

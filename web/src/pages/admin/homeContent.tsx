@@ -61,7 +61,7 @@ export const pillarsConfig: CrudConfig<TrustPillar> = {
   singular: 'Trust pillar',
   eyebrow: 'Home page',
   description:
-    'The four assurance points shown beneath the reviews (quality, verification, distribution, standard).',
+    'The assurance points shown in the approach section of the home page (quality, verification, distribution, standard). Each one carries its own icon from the library.',
   labelKey: 'title',
   searchKeys: ['title', 'subtitle'],
   reorderable: true,

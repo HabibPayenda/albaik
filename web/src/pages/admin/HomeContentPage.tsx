@@ -11,8 +11,8 @@ const SECTION_TYPES = [
   { value: 'hero', label: 'Hero section' },
   { value: 'collections', label: 'Collections grid' },
   { value: 'featured-products', label: 'Featured products' },
-  { value: 'approach', label: 'Guided selection / approach' },
-  { value: 'testimonials', label: 'Testimonials + trust pillars' },
+  { value: 'approach', label: 'Approach (trust pillars + guided selection)' },
+  { value: 'testimonials', label: 'Testimonials' },
   { value: 'distribution', label: 'Distribution panel' },
   { value: 'generic', label: 'Generic text' },
 ]
