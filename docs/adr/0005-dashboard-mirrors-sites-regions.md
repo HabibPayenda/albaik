@@ -1,0 +1,5 @@
+# 0005 — Dashboard mirrors the site's regions, not the data model
+
+Status: accepted
+
+The dashboard is reorganised so its navigation groups mirror the regions of the public site rather than the underlying content tables: Overview · Catalogue · Home page · Site content · Inbox · System. The home page becomes a single screen with tabbed editors (Hero slides, Hero statistics, Trust pillars, Testimonials, Hair profiles), every list renders in the same order as the public page and gains one consistent up/down reorder control, and all dashboard screens share one page grammar — the same header, table and field kit, with a modal form unless the form is genuinely large (only Products keeps a full-page editor). We chose this over grouping by content type because staff think "I edit the home page here", not "which table owns this row"; the scattered, model-shaped screens were the direct cause of the "lots of places to search for one item" complaint.
