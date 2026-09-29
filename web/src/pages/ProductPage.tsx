@@ -28,14 +28,14 @@ const TABS = [
  *
  * Two things changed here, both from the brief:
  *
- * 1. **The gallery fits the viewport.** The stage was a fixed `aspect-[4/5]`, so on a
- *    900px screen the photograph alone ran past the fold and the product could not be
- *    seen without scrolling. The stage is now height-capped against the viewport
- *    (`100dvh` minus the sticky header and page chrome), the artwork is `object-contain`
- *    so a tall bottle is never cropped, and the thumbnails moved to a vertical rail
- *    beside the stage on desktop rather than a row underneath — so the gallery column's
- *    height is the stage's height and nothing is pushed below the fold. The column is
- *    also sticky, which keeps the product in view while the specification column scrolls.
+ * 1. **The gallery shows the whole product in a 4:5 Product frame.** The stage is a fixed
+ *    `aspect-[4/5]` frame whose width is capped so the frame's height still clears a
+ *    laptop viewport (`100dvh` minus the sticky header and page chrome). The artwork is
+ *    fitted, never cropped, so a tall bottle is shown whole; the thumbnails sit in a
+ *    vertical rail beside the stage on desktop rather than a row underneath, so the
+ *    gallery column's height is the stage's height and nothing is pushed below the fold.
+ *    The column is also sticky, which keeps the product in view while the specification
+ *    column scrolls. See docs/adr/0006-product-images-are-framed-4-5.md.
  *
  * 2. **The enquiry carries the product.** "Enquire about this product" used to link to
  *    `/contact?topic=wholesale` with no product attached, so the team received a message
@@ -154,50 +154,53 @@ export function ProductPage() {
             {/* ------------------------------------------------------ gallery */}
             <div className="lg:col-span-6 lg:sticky lg:top-24 lg:self-start">
               <div className="flex flex-col gap-space-sm lg:flex-row">
-                {/* Stage. Height is bounded by the viewport, not by the artwork's
-                    aspect ratio, so the whole product is visible without scrolling. */}
-                <div className="order-1 relative flex h-[clamp(300px,calc(100dvh-13rem),600px)] flex-1 items-center justify-center overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-sm shadow-e1 lg:order-2">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={activeImage}
-                      initial={{ opacity: 0, scale: 0.985 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.985 }}
-                      transition={{ duration: 0.3, ease: EASE }}
-                      className="group relative size-full overflow-hidden rounded-2xl"
-                    >
-                      <ProductImage
-                        src={active?.url || product.imageUrl}
-                        alt={active?.alt ?? product.name}
-                        name={product.name}
-                        accentFrom={product.accentFrom}
-                        accentTo={product.accentTo}
-                        priority
-                        // `contain`, not `cover`: a 400ml bottle is tall and narrow, and
-                        // cover cropped the cap and the base off in a 4:5 frame.
-                        imageClassName="object-contain"
-                        className="size-full"
-                      />
-                    </motion.div>
-                  </AnimatePresence>
+                {/* Stage. A 4:5 Product frame showing the whole photo; its width is
+                    capped so the frame's height still clears a laptop viewport
+                    (height = width × 1.25 ≤ viewport − chrome). */}
+                <div className="order-1 flex flex-1 items-center justify-center lg:order-2">
+                  <div
+                    className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-sm shadow-e1"
+                    style={{ maxWidth: 'min(100%, calc((100dvh - 13rem) * 0.8))' }}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeImage}
+                        initial={{ opacity: 0, scale: 0.985 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.985 }}
+                        transition={{ duration: 0.3, ease: EASE }}
+                        className="group relative size-full overflow-hidden rounded-2xl"
+                      >
+                        <ProductImage
+                          src={active?.url || product.imageUrl}
+                          alt={active?.alt ?? product.name}
+                          name={product.name}
+                          accentFrom={product.accentFrom}
+                          accentTo={product.accentTo}
+                          priority
+                          className="size-full"
+                        />
+                      </motion.div>
+                    </AnimatePresence>
 
-                  {product.badge ? (
-                    <div className="pointer-events-none absolute top-4 left-4">
-                      <BadgeOverlay accent={asAccent(product.badgeStyle)}>{product.badge}</BadgeOverlay>
-                    </div>
-                  ) : null}
-                  {product.size ? (
-                    <div className="pointer-events-none absolute right-4 bottom-4 rounded-lg bg-surface-container-lowest/90 px-3.5 py-2 text-label-md font-bold text-primary-container shadow-sm backdrop-blur-md">
-                      {product.size}
-                    </div>
-                  ) : null}
+                    {product.badge ? (
+                      <div className="pointer-events-none absolute top-4 left-4">
+                        <BadgeOverlay accent={asAccent(product.badgeStyle)}>{product.badge}</BadgeOverlay>
+                      </div>
+                    ) : null}
+                    {product.size ? (
+                      <div className="pointer-events-none absolute right-4 bottom-4 rounded-lg bg-surface-container-lowest/90 px-3.5 py-2 text-label-md font-bold text-primary-container shadow-sm backdrop-blur-md">
+                        {product.size}
+                      </div>
+                    ) : null}
 
-                  {gallery.length > 1 ? (
-                    <>
-                      <GalleryArrow side="left" onClick={() => step(-1)} />
-                      <GalleryArrow side="right" onClick={() => step(1)} />
-                    </>
-                  ) : null}
+                    {gallery.length > 1 ? (
+                      <>
+                        <GalleryArrow side="left" onClick={() => step(-1)} />
+                        <GalleryArrow side="right" onClick={() => step(1)} />
+                      </>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/* Thumbnails — a vertical rail on desktop, a row beneath on mobile. */}
@@ -211,7 +214,7 @@ export function ProductPage() {
                         aria-label={`View image ${index + 1} of ${gallery.length}`}
                         aria-current={index === activeImage}
                         className={cn(
-                          'relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 lg:w-full',
+                          'relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 lg:w-full',
                           index === activeImage
                             ? 'border-secondary shadow-sm'
                             : 'border-transparent opacity-65 hover:opacity-100',
@@ -224,7 +227,6 @@ export function ProductPage() {
                           accentFrom={product.accentFrom}
                           accentTo={product.accentTo}
                           zoomOnHover={false}
-                          imageClassName="object-contain"
                           className="size-full bg-surface-container-lowest p-1"
                         />
                       </button>
