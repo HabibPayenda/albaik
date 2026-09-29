@@ -1,0 +1,515 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { fetchProduct, clearProduct } from '@/store/catalogSlice'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { Container, Section, SectionHeading } from '@/components/ui/Layout'
+import { ErrorState, PageLoader } from '@/components/ui/Feedback'
+import { ProductImage } from '@/components/ui/ProductImage'
+import { asAccent, BadgeOverlay, Chip } from '@/components/ui/Badge'
+import { ButtonAnchor, ButtonLink } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
+import { Reveal, Stagger, StaggerItem } from '@/components/ui/Reveal'
+import { ProductCard } from '@/components/ui/ProductCard'
+import { cn, formatPrice } from '@/lib/utils'
+import { EASE } from '@/lib/motion'
+
+const TABS = [
+  { key: 'benefits', label: 'Key benefits', icon: 'check_circle' },
+  { key: 'usage', label: 'How to use', icon: 'info' },
+  { key: 'safety', label: 'Safety', icon: 'shield' },
+] as const
+
+/**
+ * Product detail.
+ *
+ * Two things changed here, both from the brief:
+ *
+ * 1. **The gallery fits the viewport.** The stage was a fixed `aspect-[4/5]`, so on a
+ *    900px screen the photograph alone ran past the fold and the product could not be
+ *    seen without scrolling. The stage is now height-capped against the viewport
+ *    (`100dvh` minus the sticky header and page chrome), the artwork is `object-contain`
+ *    so a tall bottle is never cropped, and the thumbnails moved to a vertical rail
+ *    beside the stage on desktop rather than a row underneath — so the gallery column's
+ *    height is the stage's height and nothing is pushed below the fold. The column is
+ *    also sticky, which keeps the product in view while the specification column scrolls.
+ *
+ * 2. **The enquiry carries the product.** "Enquire about this product" used to link to
+ *    `/contact?topic=wholesale` with no product attached, so the team received a message
+ *    that said nothing about what it was about. It now passes the slug through to the
+ *    contact form, which resolves the product, shows it as a context chip, and sends the
+ *    name and slug with the enquiry so the notification email is self-contained. The
+ *    WhatsApp deep link carries the same facts plus a link back to the page.
+ */
+export function ProductPage() {
+  const { productSlug = '' } = useParams()
+  const dispatch = useAppDispatch()
+  const settings = useSiteSettings()
+  const { product, detailStatus, error } = useAppSelector((state) => state.catalog)
+  const [activeImage, setActiveImage] = useState(0)
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('benefits')
+
+  // The tab labels are dashboard-editable copy (`labels.productTab.*`); the panel
+  // headings that mirror them read the same value so an edit lands in both places.
+  const tabs = useMemo(
+    () => TABS.map((entry) => ({ ...entry, label: settings.text(`labels.productTab.${entry.key}`, entry.label) })),
+    [settings],
+  )
+  const activeTab = tabs.find((entry) => entry.key === tab)!
+
+  useDocumentTitle(
+    product ? `${product.name} — ${settings.siteName}` : `Product — ${settings.siteName}`,
+    product?.shortDescription,
+  )
+
+  useEffect(() => {
+    if (productSlug) dispatch(fetchProduct(productSlug))
+    setActiveImage(0)
+    return () => {
+      dispatch(clearProduct())
+    }
+  }, [productSlug, dispatch])
+
+  const gallery = product?.images.length
+    ? product.images
+    : product
+      ? [{ id: 0, url: product.imageUrl ?? '', alt: product.name, sortOrder: 0 }]
+      : []
+
+  const step = useCallback(
+    (delta: number) => {
+      if (gallery.length < 2) return
+      setActiveImage((current) => (current + delta + gallery.length) % gallery.length)
+    },
+    [gallery.length],
+  )
+
+  // Arrow keys page through the gallery, as long as focus is not inside a control.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+      if (event.key === 'ArrowLeft') step(-1)
+      if (event.key === 'ArrowRight') step(1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [step])
+
+  if (detailStatus === 'loading' || detailStatus === 'idle') {
+    return <PageLoader label="Loading product" />
+  }
+
+  if (detailStatus === 'error' || !product) {
+    return (
+      <Container className="py-space-xl">
+        <ErrorState
+          title="Product not found"
+          description={error ?? `We could not find "${productSlug}".`}
+          onRetry={() => dispatch(fetchProduct(productSlug))}
+        />
+      </Container>
+    )
+  }
+
+  const price = formatPrice(product.price, product.currency, settings.priceOnRequest)
+  const hasNumericPrice = product.price !== null && product.price !== undefined
+
+  const enquiryHref = `/contact?topic=product&product=${encodeURIComponent(product.slug)}`
+
+  /*
+   * The WhatsApp message is written to be complete on its own: whoever opens it in
+   * the Albaik inbox can identify the exact product, its formulation and size without
+   * having to look anything up, and the link goes back to the page.
+   */
+  const whatsappText = [
+    'Hello Albaik, I would like to enquire about this product:',
+    '',
+    `• Product: ${product.name}`,
+    product.formulationLabel ? `• Formulation: ${product.formulationLabel}` : null,
+    product.brandName ? `• Brand: ${product.brandName}` : null,
+    product.categoryName ? `• Collection: ${product.categoryName}` : null,
+    product.size ? `• Size: ${product.size}` : null,
+    '',
+    `${typeof window === 'undefined' ? '' : window.location.origin}/products/${product.slug}`,
+  ]
+    .filter((line) => line !== null)
+    .join('\n')
+
+  const whatsappHref = settings.whatsapp
+    ? `https://wa.me/${settings.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(whatsappText)}`
+    : null
+
+  const active = gallery[activeImage]
+
+  return (
+    <>
+      {/* -------------------------------------------------------------- detail */}
+      <section className="w-full border-b border-outline-variant/30 bg-surface-container-low pt-space-md pb-space-lg">
+        <Container>
+          <div className="grid grid-cols-1 gap-gutter lg:grid-cols-12">
+            {/* ------------------------------------------------------ gallery */}
+            <div className="lg:col-span-6 lg:sticky lg:top-24 lg:self-start">
+              <div className="flex flex-col gap-space-sm lg:flex-row">
+                {/* Stage. Height is bounded by the viewport, not by the artwork's
+                    aspect ratio, so the whole product is visible without scrolling. */}
+                <div className="order-1 relative flex h-[clamp(300px,calc(100dvh-13rem),600px)] flex-1 items-center justify-center overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-sm shadow-e1 lg:order-2">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeImage}
+                      initial={{ opacity: 0, scale: 0.985 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.985 }}
+                      transition={{ duration: 0.3, ease: EASE }}
+                      className="group relative size-full overflow-hidden rounded-2xl"
+                    >
+                      <ProductImage
+                        src={active?.url || product.imageUrl}
+                        alt={active?.alt ?? product.name}
+                        name={product.name}
+                        accentFrom={product.accentFrom}
+                        accentTo={product.accentTo}
+                        priority
+                        // `contain`, not `cover`: a 400ml bottle is tall and narrow, and
+                        // cover cropped the cap and the base off in a 4:5 frame.
+                        imageClassName="object-contain"
+                        className="size-full"
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {product.badge ? (
+                    <div className="pointer-events-none absolute top-4 left-4">
+                      <BadgeOverlay accent={asAccent(product.badgeStyle)}>{product.badge}</BadgeOverlay>
+                    </div>
+                  ) : null}
+                  {product.size ? (
+                    <div className="pointer-events-none absolute right-4 bottom-4 rounded-lg bg-surface-container-lowest/90 px-3.5 py-2 text-label-md font-bold text-primary-container shadow-sm backdrop-blur-md">
+                      {product.size}
+                    </div>
+                  ) : null}
+
+                  {gallery.length > 1 ? (
+                    <>
+                      <GalleryArrow side="left" onClick={() => step(-1)} />
+                      <GalleryArrow side="right" onClick={() => step(1)} />
+                    </>
+                  ) : null}
+                </div>
+
+                {/* Thumbnails — a vertical rail on desktop, a row beneath on mobile. */}
+                {gallery.length > 1 ? (
+                  <div className="order-2 flex gap-2 overflow-x-auto pb-1 no-scrollbar lg:order-1 lg:w-20 lg:shrink-0 lg:flex-col lg:overflow-visible lg:pb-0">
+                    {gallery.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        onClick={() => setActiveImage(index)}
+                        aria-label={`View image ${index + 1} of ${gallery.length}`}
+                        aria-current={index === activeImage}
+                        className={cn(
+                          'relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 lg:w-full',
+                          index === activeImage
+                            ? 'border-secondary shadow-sm'
+                            : 'border-transparent opacity-65 hover:opacity-100',
+                        )}
+                      >
+                        <ProductImage
+                          src={image.url}
+                          alt={image.alt ?? product.name}
+                          name={product.name}
+                          accentFrom={product.accentFrom}
+                          accentTo={product.accentTo}
+                          zoomOnHover={false}
+                          imageClassName="object-contain"
+                          className="size-full bg-surface-container-lowest p-1"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* -------------------------------------------------------- details */}
+            <div className="flex flex-col gap-space-md lg:col-span-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  to={`/collections/${product.categorySlug}/${product.brandSlug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-highest px-3 py-1.5 text-label-md font-bold uppercase tracking-wider text-on-surface transition-colors hover:bg-water-foam hover:text-primary-container"
+                >
+                  <Icon name="brand" size={13} />
+                  {product.brandName}
+                </Link>
+                {product.formulationLabel ? (
+                  <span className="text-label-md font-bold uppercase tracking-wider text-secondary">
+                    {product.formulationLabel}
+                  </span>
+                ) : null}
+              </div>
+
+              <h1 className="font-display text-headline-lg-mobile font-semibold tracking-tight text-on-surface md:text-headline-lg">
+                {product.name}
+              </h1>
+
+              {product.subtitle ? (
+                <p className="text-body-lg text-on-surface-variant">{product.subtitle}</p>
+              ) : null}
+
+              <div className="flex flex-wrap items-end gap-space-md rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-space-md">
+                <div className="flex flex-col">
+                  <span className="text-label-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                    {hasNumericPrice ? 'Retail price' : 'Pricing'}
+                  </span>
+                  <span
+                    className={cn(
+                      'font-display font-bold text-primary',
+                      hasNumericPrice ? 'text-headline-lg' : 'text-headline-sm',
+                    )}
+                  >
+                    {settings.showPrices ? price : settings.priceOnRequest}
+                  </span>
+                  {product.priceNote ? (
+                    <span className="mt-0.5 text-body-sm text-on-surface-variant">{product.priceNote}</span>
+                  ) : null}
+                </div>
+
+                <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-marine/10 px-3 py-1.5 text-label-md font-bold text-on-tertiary-fixed-variant">
+                  <Icon name="check_circle" size={14} />
+                  {product.stockStatus === 'OutOfStock' ? 'Out of stock' : 'Available for wholesale'}
+                </span>
+              </div>
+
+              {product.shortDescription ? (
+                <p className="text-body-md leading-relaxed text-on-surface-variant">{product.shortDescription}</p>
+              ) : null}
+
+              {product.benefits.length ? (
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {product.benefits.slice(0, 4).map((benefit) => (
+                    <li key={benefit} className="flex items-start gap-2 text-body-sm text-on-surface">
+                      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary/12 text-secondary">
+                        <Icon name="check" size={11} strokeWidth={3} />
+                      </span>
+                      {benefit}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {product.ingredients.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {product.ingredients.map((tag) => (
+                    <Chip key={tag} accent={product.badgeStyle === 'gold' ? 'gold' : 'teal'}>
+                      {tag}
+                    </Chip>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
+                <ButtonLink to={enquiryHref} variant="primary" size="lg" icon="mail">
+                  Enquire about this product
+                </ButtonLink>
+                {whatsappHref ? (
+                  <ButtonAnchor href={whatsappHref} target="_blank" variant="outline" size="lg" icon="whatsapp">
+                    WhatsApp
+                  </ButtonAnchor>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 border-t border-outline-variant/40 pt-space-md sm:grid-cols-3">
+                {[
+                  { icon: 'verified_user', title: 'Authentic', copy: 'Official Albaik Group product' },
+                  { icon: 'truck', title: 'Distribution', copy: 'Nationwide wholesale network' },
+                  { icon: 'info', title: 'Verified copy', copy: 'Claims from approved documentation' },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-2">
+                    <Icon name={item.icon} size={18} className="mt-0.5 text-secondary" />
+                    <div className="flex flex-col">
+                      <span className="text-label-md font-bold text-on-surface">{item.title}</span>
+                      <span className="text-body-sm text-on-surface-variant">{item.copy}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* ------------------------------------------------------------- tabs */}
+      <Section tone="surface">
+        <Container>
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-space-lg flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-surface-container-low p-1">
+              {tabs.map((item) => {
+                const isActive = tab === item.key
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setTab(item.key)}
+                    className={cn(
+                      'relative flex items-center gap-2 rounded-full px-4 py-2.5 text-label-md font-semibold transition-colors duration-300',
+                      isActive ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface',
+                    )}
+                    aria-selected={isActive}
+                    role="tab"
+                  >
+                    {isActive ? (
+                      <motion.span
+                        layoutId="product-tab"
+                        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                        className="absolute inset-0 rounded-full bg-surface-container-lowest shadow-sm"
+                      />
+                    ) : null}
+                    <Icon name={item.icon} size={15} className="relative z-10" />
+                    <span className="relative z-10">{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                >
+                  {tab === 'benefits' ? (
+                    <div className="flex flex-col gap-space-sm">
+                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">
+                        {activeTab.label}
+                      </h2>
+                      {product.benefits.length ? (
+                        <ul className="flex flex-col gap-2">
+                          {product.benefits.map((benefit) => (
+                            <li key={benefit} className="flex items-start gap-2.5 text-body-md text-on-surface-variant">
+                              <Icon name="check_circle" size={17} className="mt-0.5 shrink-0 text-secondary" />
+                              {benefit}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-body-md text-on-surface-variant">
+                          Benefit statements for this product have not been published yet.
+                        </p>
+                      )}
+                      <p className="mt-space-sm rounded-xl border-l-[3px] border-accent-gold bg-surface-container-low p-space-sm text-body-sm text-on-surface-variant">
+                        Ingredient lists, percentages, certifications and performance claims are published only from
+                        approved official product documentation.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {tab === 'usage' ? (
+                    <div className="flex flex-col gap-space-sm">
+                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">{activeTab.label}</h2>
+                      <p className="text-body-md leading-relaxed text-on-surface-variant">
+                        {product.howToUse ??
+                          'Usage instructions for this product have not been published yet.'}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {tab === 'safety' ? (
+                    <div className="flex flex-col gap-space-sm">
+                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">
+                        Safety information
+                      </h2>
+                      <p className="text-body-md leading-relaxed text-on-surface-variant">
+                        {product.safetyNote ?? 'Safety information has not been published yet.'}
+                      </p>
+                      {product.suitableFor ? (
+                        <p className="text-body-sm text-on-surface-variant">
+                          <span className="font-semibold text-on-surface">Suitable for: </span>
+                          {product.suitableFor}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </Container>
+      </Section>
+
+      {/* ------------------------------------------------------------ related */}
+      {product.related.length ? (
+        <Section tone="low">
+          <Container>
+            <SectionHeading
+              eyebrow="Complement your routine"
+              title="Related formulations"
+              subtitle={`More from ${product.categoryName} and ${product.brandName}.`}
+              className="mb-space-lg"
+            />
+            <Stagger className="grid grid-cols-1 gap-space-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {product.related.map((related) => (
+                <StaggerItem key={related.id}>
+                  <ProductCard
+                    product={related}
+                    showPrice={settings.showPrices}
+                    priceOnRequest={settings.priceOnRequest}
+                    className="h-full"
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </Container>
+        </Section>
+      ) : null}
+
+      <Reveal>
+        <Container className="pb-space-xl">
+          <div className="flex flex-wrap items-center justify-between gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg">
+            <div className="flex flex-col gap-1">
+              <span className="font-display text-headline-sm font-semibold text-on-surface">
+                Looking for wholesale supply?
+              </span>
+              <span className="text-body-sm text-on-surface-variant">
+                Minimum order quantity and pricing are available on request.
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-space-sm">
+              <ButtonLink to="/distribution" variant="primary" icon="store">
+                Distribution information
+              </ButtonLink>
+              <ButtonLink to="/contact" variant="outline" icon="mail">
+                Contact Albaik
+              </ButtonLink>
+            </div>
+          </div>
+        </Container>
+      </Reveal>
+    </>
+  )
+}
+
+/** Prev/next control overlaid on the gallery stage. */
+function GalleryArrow({ side, onClick }: { side: 'left' | 'right'; onClick: () => void }) {
+  const Glyph = side === 'left' ? ChevronLeft : ChevronRight
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={side === 'left' ? 'Previous image' : 'Next image'}
+      className={cn(
+        'absolute top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full',
+        'border border-outline-variant/40 bg-surface-container-lowest/85 text-on-surface shadow-sm backdrop-blur-md',
+        'transition-all duration-300 hover:bg-surface-container-lowest hover:shadow-md',
+        side === 'left' ? 'left-3' : 'right-3',
+      )}
+    >
+      <Glyph size={19} />
+    </button>
+  )
+}
