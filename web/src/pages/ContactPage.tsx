@@ -412,7 +412,31 @@ export function ContactPage() {
                 partner card. */}
             {mapSrc ? (
               <Reveal className="lg:col-span-12" direction="up" delay={0.08}>
-                <div className="overflow-hidden rounded-3xl border border-outline-variant/30 shadow-e1">
+                <div className="relative overflow-hidden rounded-[2rem] border border-outline-variant/30 bg-surface-container-lowest shadow-e2">
+                  <div className="flex flex-wrap items-center justify-between gap-space-sm border-b border-outline-variant/30 bg-surface-container-low px-space-lg py-space-md">
+                    <div className="flex min-w-0 items-center gap-space-sm">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-royal-gradient-compact text-accent-gold">
+                        <Icon name="location_on" size={18} />
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="eyebrow text-secondary">Find us</span>
+                        <span className="truncate font-display text-body-lg font-semibold text-on-surface">
+                          {settings.address || 'Albaik head office'}
+                        </span>
+                      </span>
+                    </div>
+                    <ButtonAnchor
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        settings.address || 'Albaik Group of Companies',
+                      )}`}
+                      target="_blank"
+                      variant="outline"
+                      size="sm"
+                      iconRight="north_east"
+                    >
+                      Get directions
+                    </ButtonAnchor>
+                  </div>
                   <iframe
                     title="Albaik head office location"
                     src={mapSrc}
