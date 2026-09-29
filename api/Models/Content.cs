@@ -162,7 +162,7 @@ public class ContactMessage
     public string? Company { get; set; }
     public string? Subject { get; set; }
     public string Message { get; set; } = "";
-    /// <summary>"contact" | "wholesale" | "newsletter"</summary>
+    /// <summary>"contact" | "wholesale" | "product" | "newsletter"</summary>
     public string Kind { get; set; } = "contact";
     /// <summary>Set when the enquiry was started from a product page ("Enquire about this product").</summary>
     public string? ProductSlug { get; set; }

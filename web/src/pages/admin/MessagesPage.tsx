@@ -7,7 +7,7 @@ import { AdminCard, AdminPageHeader, AdminToolbar } from '@/components/admin/Adm
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Field, Select, TextInput } from '@/components/ui/Field'
-import { Chip } from '@/components/ui/Badge'
+import { Chip, type Accent } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/Feedback'
 import { cn, formatDate } from '@/lib/utils'
@@ -17,7 +17,16 @@ import type { ContactMessage } from '@/lib/types'
 const KIND_LABEL: Record<string, string> = {
   contact: 'General',
   wholesale: 'Wholesale',
+  product: 'Product enquiry',
   newsletter: 'Mailing list',
+}
+
+/** One pill accent per kind, so the four enquiry types are distinguishable at a glance. */
+const KIND_ACCENT: Record<string, Accent> = {
+  contact: 'neutral',
+  wholesale: 'secondary',
+  product: 'primary',
+  newsletter: 'teal',
 }
 
 export default function MessagesPage() {
@@ -130,6 +139,7 @@ export default function MessagesPage() {
               <option value="">All types</option>
               <option value="contact">General enquiry</option>
               <option value="wholesale">Wholesale</option>
+              <option value="product">Product enquiry</option>
               <option value="newsletter">Mailing list</option>
             </Select>
           </Field>
@@ -180,7 +190,7 @@ export default function MessagesPage() {
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-body-sm font-semibold text-on-surface">{message.name}</span>
                       {!message.isRead ? <Chip accent="gold">New</Chip> : null}
-                      <Chip accent={message.kind === 'wholesale' ? 'secondary' : 'neutral'}>
+                      <Chip accent={KIND_ACCENT[message.kind] ?? 'neutral'}>
                         {KIND_LABEL[message.kind] ?? message.kind}
                       </Chip>
                       {!message.emailDelivered && message.kind !== 'newsletter' ? (
