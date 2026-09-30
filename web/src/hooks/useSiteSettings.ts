@@ -20,7 +20,10 @@ export function useSiteSettings() {
       text: (key: string, fallback = '') => (settings[key] ?? '').trim() || fallback,
 
       siteName: settings['site.name'] || 'Albaik Group of Companies',
-      shortName: settings['site.shortName'] || 'ALBAIK',
+      // Trimmed where the others are not: this one is painted as the Product plate's
+      // wordmark, and a value of only spaces would render a wordless plate rather than
+      // the built-in wordmark.
+      shortName: (settings['site.shortName'] ?? '').trim() || 'ALBAIK',
       tagline: settings['site.tagline'] || 'The Mark of Pure Perfection',
       description: settings['site.description'] || '',
 

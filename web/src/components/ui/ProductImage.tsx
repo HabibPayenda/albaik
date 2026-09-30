@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Icon } from './Icon'
 import { accentGradient, cn } from '@/lib/utils'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 
 /**
  * Product artwork.
@@ -74,6 +75,8 @@ function PlaceholderPlate({
   accentFrom?: string | null
   accentTo?: string | null
 }) {
+  const settings = useSiteSettings()
+
   return (
     <div
       className="relative flex size-full flex-col items-center justify-center gap-3 p-6 text-center"
@@ -124,8 +127,13 @@ function PlaceholderPlate({
       {/* 80%, not 60%. At 60% this composited to 3.49:1 on the compact sapphire pair and
           1.58:1 on the gold pair — the old probe reported it as pure white and missed
           both, because it dropped the alpha channel. */}
-      <span className="relative z-10 text-label-sm uppercase tracking-[0.22em] text-white/80">
-        Albaik
+      {/* The site's own short name (Settings → General), not a wordmark fixed in the
+          source: the hook falls back to the built-in one, so a cleared setting cannot
+          leave the plate wordless, and the 80% alpha the contrast note above measured
+          carries over — the ratio depends on the colour, not on the glyphs. Capped like
+          the name above it, because the string is staff data now. */}
+      <span className="relative z-10 max-w-[85%] break-words text-label-sm uppercase tracking-[0.22em] text-white/80">
+        {settings.shortName}
       </span>
     </div>
   )
