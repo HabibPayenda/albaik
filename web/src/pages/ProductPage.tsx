@@ -14,7 +14,7 @@ import { ButtonAnchor, ButtonLink } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/Reveal'
 import { ProductCard } from '@/components/ui/ProductCard'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, wasPrice } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
 
 const TABS = [
@@ -117,6 +117,7 @@ export function ProductPage() {
 
   const price = formatPrice(product.price, product.currency, settings.priceOnRequest)
   const hasNumericPrice = product.price !== null && product.price !== undefined
+  const was = wasPrice(product.price, product.compareAtPrice)
 
   const enquiryHref = `/contact?topic=product&product=${encodeURIComponent(product.slug)}`
 
@@ -268,10 +269,18 @@ export function ProductPage() {
                   </span>
                   <span
                     className={cn(
-                      'font-display font-bold text-primary',
+                      'flex flex-wrap items-baseline gap-space-sm font-display font-bold text-primary',
                       hasNumericPrice ? 'text-headline-lg' : 'text-headline-sm',
                     )}
                   >
+                    {/* The struck figure is the only place the compare-at price shows,
+                        and only while it was the higher one — see `wasPrice`. */}
+                    {settings.showPrices && was !== null ? (
+                      <s className="text-body-lg font-semibold text-on-surface-variant">
+                        <span className="sr-only">Was </span>
+                        {formatPrice(was, product.currency, settings.priceOnRequest)}
+                      </s>
+                    ) : null}
                     {settings.showPrices ? price : settings.priceOnRequest}
                   </span>
                   {product.priceNote ? (

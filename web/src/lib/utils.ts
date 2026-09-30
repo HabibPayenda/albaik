@@ -57,6 +57,17 @@ export function formatPrice(
   return `${value} ${currency}`
 }
 
+/**
+ * The figure worth striking through beside the current price — and nothing when there is
+ * no such figure. An absent compare-at price says nothing, one equal to the current price
+ * is not a reduction, and one below it would display a "cut" that raises the price: only
+ * a higher figure is the former price the strike-through claims.
+ */
+export function wasPrice(price: number | null | undefined, compareAt: number | null | undefined) {
+  if (price === null || price === undefined || compareAt === null || compareAt === undefined) return null
+  return compareAt > price ? compareAt : null
+}
+
 export function formatDate(value: string | Date, withTime = false) {
   const date = typeof value === 'string' ? new Date(value) : value
   if (Number.isNaN(date.getTime())) return '—'

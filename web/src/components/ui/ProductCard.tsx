@@ -4,7 +4,7 @@ import { asAccent, BadgeOverlay, Chip } from './Badge'
 import { Icon } from './Icon'
 import { ProductImage } from './ProductImage'
 import { StarRating } from './StarRating'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, wasPrice } from '@/lib/utils'
 import type { ProductCard as ProductCardModel } from '@/lib/types'
 
 export interface ProductCardProps {
@@ -46,6 +46,8 @@ export function ProductCard({
   const href = `/products/${product.slug}`
   const price = formatPrice(product.price, product.currency, priceOnRequest)
   const hasNumericPrice = product.price !== null && product.price !== undefined
+  const was = wasPrice(product.price, product.compareAtPrice)
+  const current = showPrice ? price : priceOnRequest
 
   return (
     <motion.article
@@ -127,7 +129,21 @@ export function ProductCard({
               hasNumericPrice ? 'text-label-lg' : 'text-body-sm',
             )}
           >
-            {showPrice ? price : priceOnRequest}
+            {/* Only ever a figure the product used to cost, and only while prices are on:
+                an on-request card must not leak a number. The struck figure is also the
+                one that yields — in a narrow card it ellipsises, so the price the customer
+                actually pays is never the part that gets cut. */}
+            {showPrice && was !== null ? (
+              <span className="inline-flex min-w-0 items-baseline gap-1.5">
+                <s className="min-w-0 shrink truncate text-label-sm font-medium text-on-surface-variant">
+                  <span className="sr-only">Was </span>
+                  {formatPrice(was, product.currency, priceOnRequest)}
+                </s>
+                <span className="shrink-0">{current}</span>
+              </span>
+            ) : (
+              current
+            )}
           </span>
 
           <Link
