@@ -30,8 +30,9 @@ const ACCENT_ICON: Record<string, string> = {
  * redeploy; a row saved without an icon falls back to a neutral one.
  *
  * Band B keeps the interactive profile selector with room to breathe. The selector is a
- * *chooser*: the cards carry the title and badge, the panel carries the description.
- * Nothing is repeated.
+ * *chooser*: the cards carry the title and badge, the panel carries the description — or,
+ * when staff have an approved figure for the profile, the statistic and its label stand
+ * in front of it — and with neither entered it falls back to the profile's own name.
  */
 export function ApproachSection({ section }: { section?: HomeSection }) {
   const pillars = useAppSelector((state) => state.home.data?.trustPillars ?? [])
@@ -50,6 +51,11 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
     0,
     profiles.findIndex((p) => p.key === selected?.key),
   )
+
+  /* Whitespace from the dashboard is not a figure: a value of only spaces must not
+     blank the headline out and take the profile's name down with it. */
+  const metricValue = selected?.metricValue?.trim() || null
+  const metricLabel = selected?.metricLabel?.trim() || null
 
   if (!pillars.length && !profiles.length) return null
 
@@ -192,9 +198,29 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
                           ) : null}
                         </div>
 
-                        <p className="font-display text-headline-md font-semibold leading-snug text-white">
-                          {selected?.metricLabel ?? selected?.title}
-                        </p>
+                        {/*
+                          A statistic only when staff entered one — the dashboard tells
+                          them to leave the value blank unless the figure is documented,
+                          and the panel then names the match instead, as it always has.
+                          The figure and its label are styled the way the hero's stats
+                          are, so a number on this gradient always reads the same way.
+                        */}
+                        {metricValue ? (
+                          <div className="flex flex-col gap-1">
+                            <p className="font-display text-headline-md font-bold text-accent-gold-light">
+                              {metricValue}
+                            </p>
+                            {metricLabel ? (
+                              <p className="text-label-sm uppercase tracking-wider text-white/70">
+                                {metricLabel}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="font-display text-headline-md font-semibold leading-snug text-white">
+                            {metricLabel ?? selected?.title}
+                          </p>
+                        )}
                         <p className="text-body-sm leading-relaxed text-white/85">
                           {selected?.description}
                         </p>
