@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchBrand } from '@/store/catalogSlice'
@@ -32,6 +32,9 @@ export function BrandPage() {
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
   const { t } = useI18n()
+  /* Which logo URL has already failed to load. Stale artwork must read as "no logo"
+     rather than leaving an empty white tile beside the heading. */
+  const [failedLogo, setFailedLogo] = useState<string | null>(null)
   const brand = useAppSelector((state) => state.catalog.brand)
   const { brandStatus, error } = useAppSelector((state) => state.catalog)
 
@@ -83,13 +86,33 @@ export function BrandPage() {
 
   const products = brand.products ?? []
   const categoryName = category?.name ?? brand.categoryName ?? categorySlug
+  const logoUrl = brand.logoUrl && brand.logoUrl !== failedLogo ? brand.logoUrl : null
 
   return (
     <>
       <PageHero
         eyebrow={brand.categoryName ? `${brand.categoryName} · ${t('brand.brandLabel')}` : t('brand.brandLabel')}
-        title={brand.name}
+        title={
+          /* The brand's own mark, set beside the name. Both artwork fields are optional
+             in the dashboard, so an unset logo leaves the name alone — and a logo that
+             no longer resolves does the same rather than leaving an empty tile beside
+             the heading. The white tile is what keeps a dark or transparent mark
+             legible against the hero. */
+          <span className="flex items-center gap-space-sm">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt=""
+                onError={() => setFailedLogo(logoUrl)}
+                className="size-10 shrink-0 rounded-xl bg-clinical-white object-contain p-1 shadow-e1 md:size-14"
+              />
+            ) : null}
+            {brand.name}
+          </span>
+        }
         subtitle={brand.description}
+        backdrop={brand.imageUrl}
+        accent={brand.accent}
       >
         <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
           {brand.tagline ? (

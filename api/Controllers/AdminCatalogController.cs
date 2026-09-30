@@ -345,9 +345,16 @@ public class AdminCatalogController : ControllerBase
         b.Name = i.Name.Trim();
         b.CategoryId = i.CategoryId;
         b.Tagline = i.Tagline; b.Description = i.Description;
-        b.LogoUrl = i.LogoUrl; b.ImageUrl = i.ImageUrl; b.Accent = i.Accent;
+        // Artwork is free text and the brand page decides "no banner" from truthiness, so
+        // a value made only of spaces has to be stored as nothing. Kept verbatim it would
+        // sail past that guard and ask the browser for a photograph that cannot exist.
+        b.LogoUrl = NullIfBlank(i.LogoUrl); b.ImageUrl = NullIfBlank(i.ImageUrl);
+        b.Accent = i.Accent;
         b.SortOrder = i.SortOrder; b.IsActive = i.IsActive; b.IsFeatured = i.IsFeatured;
     }
+
+    private static string? NullIfBlank(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void Apply(Product p, ProductInput i)
     {
