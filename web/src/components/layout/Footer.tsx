@@ -6,6 +6,7 @@ import { subscribeNewsletter } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
+import { socialUrl } from '@/lib/social'
 import { Icon } from '@/components/ui/Icon'
 import { BrandMark } from '@/components/ui/BrandMark'
 import { SOCIAL_ICONS, type SocialKey } from '@/components/ui/BrandIcons'
@@ -25,13 +26,13 @@ export function Footer() {
     return acc
   }, {})
 
-  // Only networks with a URL configured in Settings appear in the footer.
+  // Only networks with a usable URL configured in Settings appear in the footer.
   const socials = (
     [
-      { key: 'facebook', href: settings.facebook, label: 'Facebook' },
-      { key: 'instagram', href: settings.instagram, label: 'Instagram' },
-      { key: 'linkedin', href: settings.linkedin, label: 'LinkedIn' },
-      { key: 'tiktok', href: settings.tiktok, label: 'TikTok' },
+      { key: 'facebook', href: socialUrl(settings.facebook), label: 'Facebook' },
+      { key: 'instagram', href: socialUrl(settings.instagram), label: 'Instagram' },
+      { key: 'linkedin', href: socialUrl(settings.linkedin), label: 'LinkedIn' },
+      { key: 'tiktok', href: socialUrl(settings.tiktok), label: 'TikTok' },
     ] as { key: SocialKey; href?: string; label: string }[]
   ).filter((s) => Boolean(s.href))
 
@@ -169,7 +170,7 @@ export function Footer() {
                       target="_blank"
                       rel="noreferrer noopener"
                       aria-label={social.label}
-                      className="flex size-8 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-all duration-300 hover:bg-royal-gradient-compact hover:text-white"
+                      className="flex size-8 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-all duration-300 hover:bg-primary-container hover:text-white"
                     >
                       <SocialGlyph size={15} />
                     </a>

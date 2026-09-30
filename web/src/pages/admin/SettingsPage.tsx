@@ -389,7 +389,9 @@ export default function SettingsPage() {
                           ? 'Paste the src URL from Google Maps → Share → Embed a map, or the whole embed code — either works.'
                           : row.key === 'catalog.priceOnRequest'
                             ? 'Shown in place of a price when a product has none set.'
-                            : undefined
+                            : row.key.startsWith('social.')
+                              ? 'Full profile URL — e.g. https://instagram.com/albaik. A bare domain works too.'
+                              : undefined
                     }
                   >
                     <div className="flex items-center gap-2">

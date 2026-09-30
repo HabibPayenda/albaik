@@ -277,7 +277,7 @@ function PillarList({ items }: { items: string[] }) {
             key={item}
             className="group relative flex items-start gap-space-md py-space-md first:pt-0 last:pb-0"
           >
-            <span className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/60 bg-clinical-white font-display text-label-md font-bold tabular-nums text-accent-gold-ink transition-all duration-300 group-hover:border-transparent group-hover:bg-royal-gradient-compact group-hover:text-accent-gold">
+            <span className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/60 bg-clinical-white font-display text-label-md font-bold tabular-nums text-accent-gold-ink transition-all duration-300 group-hover:border-transparent group-hover:bg-primary-container group-hover:text-accent-gold">
               {numeral(index)}
             </span>
             <p className="pt-2 font-display text-headline-sm font-semibold leading-snug text-on-surface transition-colors duration-300 group-hover:text-primary-container">
@@ -376,7 +376,7 @@ function ClinicalGrid({ items }: { items: string[] }) {
           className="group flex flex-col gap-space-md bg-clinical-white p-space-lg transition-colors duration-300 hover:bg-water-foam"
         >
           <div className="flex items-center justify-between">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-water-foam text-primary-container transition-colors duration-300 group-hover:bg-royal-gradient-compact group-hover:text-accent-gold">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-water-foam text-primary-container transition-colors duration-300 group-hover:bg-primary-container group-hover:text-accent-gold">
               <Icon name={VERIFICATION_ICONS[index] ?? 'check_circle'} size={22} />
             </span>
             <span className="font-display text-label-md font-bold tabular-nums tracking-[0.2em] text-accent-gold-ink">
