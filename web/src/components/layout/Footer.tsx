@@ -6,10 +6,10 @@ import { subscribeNewsletter } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
-import { socialUrl } from '@/lib/social'
+import { configuredSocials } from '@/lib/social'
 import { Icon } from '@/components/ui/Icon'
 import { BrandMark } from '@/components/ui/BrandMark'
-import { SOCIAL_ICONS, type SocialKey } from '@/components/ui/BrandIcons'
+import { SOCIAL_ICONS } from '@/components/ui/BrandIcons'
 import { Reveal } from '@/components/ui/Reveal'
 
 export function Footer() {
@@ -27,14 +27,7 @@ export function Footer() {
   }, {})
 
   // Only networks with a usable URL configured in Settings appear in the footer.
-  const socials = (
-    [
-      { key: 'facebook', href: socialUrl(settings.facebook), label: 'Facebook' },
-      { key: 'instagram', href: socialUrl(settings.instagram), label: 'Instagram' },
-      { key: 'linkedin', href: socialUrl(settings.linkedin), label: 'LinkedIn' },
-      { key: 'tiktok', href: socialUrl(settings.tiktok), label: 'TikTok' },
-    ] as { key: SocialKey; href?: string; label: string }[]
-  ).filter((s) => Boolean(s.href))
+  const socials = configuredSocials(settings)
 
   const onSubscribe = async (event: React.FormEvent) => {
     event.preventDefault()

@@ -7,13 +7,16 @@ import { resetContact, submitContact } from '@/store/uiSlice'
 import { fetchProduct } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useI18n } from '@/i18n'
 import { Container, PageHero, Section } from '@/components/ui/Layout'
 import { Field, Select, TextArea, TextInput } from '@/components/ui/Field'
 import { Button, ButtonAnchor } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Reveal } from '@/components/ui/Reveal'
+import { SOCIAL_ICONS } from '@/components/ui/BrandIcons'
 import { EASE } from '@/lib/motion'
 import { mapDirectionsUrl, mapEmbedSrc } from '@/lib/mapEmbed'
+import { configuredSocials } from '@/lib/social'
 import { cn } from '@/lib/utils'
 
 interface FormState {
@@ -57,6 +60,7 @@ const EMPTY: FormState = {
 export function ContactPage() {
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const { t } = useI18n()
   const { contactStatus, contactError } = useAppSelector((state) => state.ui)
   const product = useAppSelector((state) => state.catalog.product)
   const [params, setParams] = useSearchParams()
@@ -114,6 +118,10 @@ export function ContactPage() {
     settings.email && { icon: 'mail', label: 'Email', value: settings.email, href: `mailto:${settings.email}` },
     settings.hours && { icon: 'schedule', label: 'Opening hours', value: settings.hours, href: undefined },
   ].filter(Boolean) as { icon: string; label: string; value: string; href?: string }[]
+
+  // The same set the footer shows — a network with no usable URL in Settings stays hidden.
+  const socials = configuredSocials(settings)
+  const hasDirectChannels = Boolean(settings.whatsapp || settings.email) || socials.length > 0
 
   return (
     <>
@@ -349,23 +357,55 @@ export function ContactPage() {
                     ))}
                   </ul>
 
-                  <div className="flex flex-wrap gap-space-sm border-t border-outline-variant/40 pt-space-md">
-                    {settings.whatsapp ? (
-                      <ButtonAnchor
-                        href={`https://wa.me/${settings.whatsapp.replace(/[^\d]/g, '')}`}
-                        target="_blank"
-                        variant="success"
-                        icon="whatsapp"
-                      >
-                        WhatsApp us
-                      </ButtonAnchor>
-                    ) : null}
-                    {settings.email ? (
-                      <ButtonAnchor href={`mailto:${settings.email}`} variant="outline" icon="mail">
-                        Email
-                      </ButtonAnchor>
-                    ) : null}
-                  </div>
+                  {/* The rule and its padding belong to the content under the list; with
+                      neither a button nor a network configured there is nothing to
+                      separate, so the whole row steps aside instead of stranding a rule. */}
+                  {hasDirectChannels ? (
+                    <div className="flex flex-col gap-space-sm border-t border-outline-variant/40 pt-space-md">
+                      {settings.whatsapp || settings.email ? (
+                        <div className="flex flex-wrap gap-space-sm">
+                          {settings.whatsapp ? (
+                            <ButtonAnchor
+                              href={`https://wa.me/${settings.whatsapp.replace(/[^\d]/g, '')}`}
+                              target="_blank"
+                              variant="success"
+                              icon="whatsapp"
+                            >
+                              WhatsApp us
+                            </ButtonAnchor>
+                          ) : null}
+                          {settings.email ? (
+                            <ButtonAnchor href={`mailto:${settings.email}`} variant="outline" icon="mail">
+                              Email
+                            </ButtonAnchor>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {socials.length ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            {t('footer.followUs')}
+                          </span>
+                          {socials.map((social) => {
+                            const SocialGlyph = SOCIAL_ICONS[social.key]
+                            return (
+                              <a
+                                key={social.key}
+                                href={social.href}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                aria-label={social.label}
+                                className="flex size-8 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-all duration-300 hover:bg-primary-container hover:text-white"
+                              >
+                                <SocialGlyph size={15} />
+                              </a>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </Reveal>
 

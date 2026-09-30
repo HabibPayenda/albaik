@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils'
+import type { SocialKey } from '@/lib/social'
 
 /**
- * Brand marks for the footer.
+ * Brand marks for the social rows.
  *
- * Lucide deliberately removed its brand glyphs, so the social logos live here as
+ * Lucide deliberately removed their brand glyphs, so the social logos live here as
  * inline SVG. Keeping them local means the footer stays offline-safe (no icon CDN)
  * and the marks render at any size without a webfont.
  */
@@ -67,12 +68,12 @@ export function TikTokIcon(props: BrandIconProps) {
   )
 }
 
-/** Registry so the footer can be driven from the settings keys directly. */
+/** Registry so a row can be driven from the settings keys directly. */
 export const SOCIAL_ICONS = {
   facebook: FacebookIcon,
   instagram: InstagramIcon,
   linkedin: LinkedInIcon,
   tiktok: TikTokIcon,
-} as const
+} as const satisfies Record<SocialKey, (props: BrandIconProps) => React.ReactNode>
 
-export type SocialKey = keyof typeof SOCIAL_ICONS
+export type { SocialKey }
