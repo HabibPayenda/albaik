@@ -115,7 +115,9 @@ export function ProductPage() {
     )
   }
 
-  const price = formatPrice(product.price, product.currency, settings.priceOnRequest)
+  // The product's own currency wins; the configured default is the fallback for one that
+  // was saved without any.
+  const price = formatPrice(product.price, product.currency || settings.currency, settings.priceOnRequest)
   const hasNumericPrice = product.price !== null && product.price !== undefined
   const was = wasPrice(product.price, product.compareAtPrice)
 
@@ -278,7 +280,7 @@ export function ProductPage() {
                     {settings.showPrices && was !== null ? (
                       <s className="text-body-lg font-semibold text-on-surface-variant">
                         <span className="sr-only">Was </span>
-                        {formatPrice(was, product.currency, settings.priceOnRequest)}
+                        {formatPrice(was, product.currency || settings.currency, settings.priceOnRequest)}
                       </s>
                     ) : null}
                     {settings.showPrices ? price : settings.priceOnRequest}
@@ -470,6 +472,7 @@ export function ProductPage() {
                     product={related}
                     showPrice={settings.showPrices}
                     priceOnRequest={settings.priceOnRequest}
+                    currency={settings.currency}
                     className="h-full"
                   />
                 </StaggerItem>

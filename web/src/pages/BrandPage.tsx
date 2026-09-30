@@ -246,6 +246,7 @@ export function BrandPage() {
             products={products}
             showPrice={settings.showPrices}
             priceOnRequest={settings.priceOnRequest}
+            currency={settings.currency}
             emptyTitle={t('brand.noProductsTitle')}
             emptyDescription={t('brand.noProductsDesc', { name: brand.name })}
           />

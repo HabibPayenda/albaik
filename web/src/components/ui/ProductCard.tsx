@@ -12,6 +12,8 @@ export interface ProductCardProps {
   className?: string
   showPrice?: boolean
   priceOnRequest?: string
+  /** The site's default currency, used when the product carries none of its own. */
+  currency?: string
   ctaLabel?: string
   compact?: boolean
   priority?: boolean
@@ -39,12 +41,14 @@ export function ProductCard({
   className,
   showPrice = true,
   priceOnRequest = 'Price on request',
+  currency,
   ctaLabel = 'View details',
   compact = false,
   priority = false,
 }: ProductCardProps) {
   const href = `/products/${product.slug}`
-  const price = formatPrice(product.price, product.currency, priceOnRequest)
+  const priced = product.currency || currency
+  const price = formatPrice(product.price, priced, priceOnRequest)
   const hasNumericPrice = product.price !== null && product.price !== undefined
   const was = wasPrice(product.price, product.compareAtPrice)
   const current = showPrice ? price : priceOnRequest
@@ -137,7 +141,7 @@ export function ProductCard({
               <span className="inline-flex min-w-0 items-baseline gap-1.5">
                 <s className="min-w-0 shrink truncate text-label-sm font-medium text-on-surface-variant">
                   <span className="sr-only">Was </span>
-                  {formatPrice(was, product.currency, priceOnRequest)}
+                  {formatPrice(was, priced, priceOnRequest)}
                 </s>
                 <span className="shrink-0">{current}</span>
               </span>

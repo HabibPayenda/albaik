@@ -108,6 +108,7 @@ export function FeaturedProducts({ section }: { section?: HomeSection }) {
                   product={product}
                   showPrice={settings.showPrices}
                   priceOnRequest={settings.priceOnRequest}
+                  currency={settings.currency}
                   priority={index < 4}
                   className="h-full"
                 />

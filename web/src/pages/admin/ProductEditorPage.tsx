@@ -6,6 +6,7 @@ import { api, endpoints, errorMessage } from '@/lib/api'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadBrands, loadCategories } from '@/store/adminSlice'
 import { pushToast } from '@/store/uiSlice'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { AdminCard, AdminPageHeader } from '@/components/admin/AdminUI'
 import { ImageField, ImageGalleryField } from '@/components/admin/ImageField'
 import { Button, ButtonLink } from '@/components/ui/Button'
@@ -28,7 +29,10 @@ const EMPTY: ProductInput = {
   size: '',
   price: null,
   compareAtPrice: null,
-  currency: 'AFN',
+  // Left empty on purpose: a product with no currency of its own follows the default
+  // configured in Settings, which the editor resolves both when it renders and when it
+  // saves — so the setting reaches the field even when the settings map arrives late.
+  currency: '',
   priceNote: '',
   rating: null,
   reviewCount: 0,
@@ -62,6 +66,7 @@ export default function ProductEditorPage() {
   const isNew = !productId || productId === 'new'
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const settings = useSiteSettings()
 
   // The admin slice stores collections as `unknown[]`; narrow at the point of use.
   const categories = useAppSelector((state) => state.admin.categories.items) as Category[]
@@ -102,7 +107,7 @@ export default function ProductEditorPage() {
           size: data.size ?? '',
           price: data.price ?? null,
           compareAtPrice: data.compareAtPrice ?? null,
-          currency: data.currency ?? 'AFN',
+          currency: data.currency ?? '',
           priceNote: data.priceNote ?? '',
           rating: data.rating ?? null,
           reviewCount: data.reviewCount ?? 0,
@@ -143,6 +148,20 @@ export default function ProductEditorPage() {
     [brands, form.categoryId],
   )
 
+  /*
+   * The canonical list, plus whatever the product or the configured default already
+   * carries. The setting is free text, and a native select whose value is not among its
+   * options renders blank — which would hide the very default this field exists to start
+   * from.
+   */
+  const currencyOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(['AFN', 'USD', 'PKR', 'IRR', 'EUR', form.currency, settings.currency].filter(Boolean)),
+      ),
+    [form.currency, settings.currency],
+  )
+
   const set = <K extends keyof ProductInput>(key: K, value: ProductInput[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
@@ -162,6 +181,7 @@ export default function ProductEditorPage() {
     try {
       const payload = {
         ...form,
+        currency: form.currency || settings.currency,
         images: form.images.map((image, index) => ({ ...image, sortOrder: index })),
       }
       if (isNew) await api.post(endpoints.admin.products, payload)
@@ -435,10 +455,10 @@ export default function ProductEditorPage() {
                     <Field label="Currency" htmlFor="p-currency">
                       <Select
                         id="p-currency"
-                        value={form.currency}
+                        value={form.currency || settings.currency}
                         onChange={(event) => set('currency', event.target.value)}
                       >
-                        {['AFN', 'USD', 'PKR', 'IRR', 'EUR'].map((value) => (
+                        {currencyOptions.map((value) => (
                           <option key={value} value={value}>
                             {value}
                           </option>
@@ -741,7 +761,7 @@ export default function ProductEditorPage() {
                   <span className="mt-1 font-display text-headline-sm font-bold text-primary">
                     {form.price === null || form.price === undefined
                       ? 'Price on request'
-                      : `${form.price} ${form.currency}`}
+                      : `${form.price} ${form.currency || settings.currency}`}
                   </span>
                 </div>
               </div>

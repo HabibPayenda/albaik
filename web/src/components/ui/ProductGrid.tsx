@@ -15,6 +15,7 @@ export function ProductGrid({
   loading,
   showPrice = true,
   priceOnRequest,
+  currency,
   emptyTitle = 'No products found',
   emptyDescription = 'Try a different collection or clear your filters.',
   onReset,
@@ -25,6 +26,8 @@ export function ProductGrid({
   loading?: boolean
   showPrice?: boolean
   priceOnRequest?: string
+  /** The site's default currency, for products that carry none of their own. */
+  currency?: string
   emptyTitle?: string
   emptyDescription?: string
   onReset?: () => void
@@ -85,6 +88,7 @@ export function ProductGrid({
               product={product}
               showPrice={showPrice}
               priceOnRequest={priceOnRequest}
+              currency={currency}
               priority={index < 3}
               className="h-full"
             />

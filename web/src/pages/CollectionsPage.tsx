@@ -290,6 +290,7 @@ export function CollectionsPage() {
             loading={listStatus === 'loading'}
             showPrice={settings.showPrices}
             priceOnRequest={settings.priceOnRequest}
+            currency={settings.currency}
             onReset={hasFilters ? clearAll : undefined}
             emptyTitle={t('collections.noMatchTitle')}
             emptyDescription={t('collections.noMatchDesc')}

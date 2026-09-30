@@ -220,6 +220,7 @@ export function CategoryPage() {
             loading={listStatus === 'loading'}
             showPrice={settings.showPrices}
             priceOnRequest={settings.priceOnRequest}
+            currency={settings.currency}
             emptyTitle={t('category.nothingPublishedTitle')}
             emptyDescription={t('category.nothingPublishedDesc', { name: category.name })}
           />

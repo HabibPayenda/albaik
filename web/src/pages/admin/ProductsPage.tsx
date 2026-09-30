@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadBrands, loadCategories, loadProducts, deleteResource } from '@/store/adminSlice'
 import { pushToast } from '@/store/uiSlice'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { AdminCard, AdminPageHeader, AdminToolbar } from '@/components/admin/AdminUI'
 import { DataTable, type Column } from '@/components/admin/DataTable'
 import { Button, ButtonLink } from '@/components/ui/Button'
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   // The admin slice stores collections as `unknown[]`; narrow at the point of use.
   const categories = useAppSelector((state) => state.admin.categories.items) as Category[]
   const brands = useAppSelector((state) => state.admin.brands.items) as Brand[]
+  const settings = useSiteSettings()
 
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -106,7 +108,7 @@ export default function ProductsPage() {
       label: 'Price',
       render: (row) => (
         <span className={row.price === null || row.price === undefined ? 'text-on-surface-variant' : 'font-semibold'}>
-          {formatPrice(row.price, row.currency, 'On request')}
+          {formatPrice(row.price, row.currency || settings.currency, 'On request')}
         </span>
       ),
     },
