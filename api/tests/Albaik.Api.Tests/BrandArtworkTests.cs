@@ -69,9 +69,9 @@ public class BrandArtworkTests : IClassFixture<AlbaikApiFactory>
     /// <summary>
     /// The other half of the fallback: artwork that was never filled in must be served as
     /// nothing, because the brand page decides "no banner" from truthiness. A value of
-    /// only spaces is not nothing — it would pass the guard and ask the browser for a
-    /// photograph that cannot exist, leaving the hero darkened by a scrim over a failed
-    /// image instead of the royal gradient it should fall back to.
+    /// only spaces is not nothing — it would sail past that guard and ask the browser for
+    /// a photograph that can never resolve, a failing request on every visit, where the
+    /// hero was built to show the royal gradient instead.
     /// </summary>
     [Fact]
     public async Task BrandArtwork_BlankOrWhitespace_IsServedAsUnset()

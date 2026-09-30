@@ -108,7 +108,12 @@ export function CategoryPage() {
 
   return (
     <>
-      <PageHero eyebrow={category.tagline} title={category.name} subtitle={category.description}>
+      <PageHero
+        eyebrow={category.tagline}
+        title={category.name}
+        subtitle={category.description}
+        backdrop={category.imageUrl}
+      >
         <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 backdrop-blur-md">
             <Icon name="brand" size={14} className="text-accent-gold" />

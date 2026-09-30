@@ -336,7 +336,10 @@ public class AdminCatalogController : ControllerBase
         c.Name = i.Name.Trim();
         c.NameDari = i.NameDari; c.NamePashto = i.NamePashto;
         c.Tagline = i.Tagline; c.Description = i.Description;
-        c.ImageUrl = i.ImageUrl; c.Icon = i.Icon; c.Accent = i.Accent;
+        // Same rule as a brand's artwork: blank has to be stored as nothing, because the
+        // collection hero reads "no backdrop" from truthiness and "   " is truthy.
+        c.ImageUrl = NullIfBlank(i.ImageUrl);
+        c.Icon = i.Icon; c.Accent = i.Accent;
         c.SortOrder = i.SortOrder; c.IsActive = i.IsActive; c.ShowInNav = i.ShowInNav;
     }
 
