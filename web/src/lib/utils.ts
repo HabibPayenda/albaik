@@ -68,6 +68,18 @@ export function wasPrice(price: number | null | undefined, compareAt: number | n
   return compareAt > price ? compareAt : null
 }
 
+/**
+ * Whether a link staff saved with "Open in a new tab" should actually open one. Only an
+ * address that can leave the site can: an internal route must keep the site's
+ * client-side navigation, or the click would force a full page reload for a link that
+ * already lives here — and react-router would swallow a scheme-less `//host` into an
+ * in-app path, so protocol-relative counts as external too. An unflagged link never
+ * opens a tab whatever it points at.
+ */
+export function opensInNewTab(flag: boolean | undefined, path: string) {
+  return Boolean(flag) && /^(?:https?:)?\/\//i.test(path)
+}
+
 export function formatDate(value: string | Date, withTime = false) {
   const date = typeof value === 'string' ? new Date(value) : value
   if (Number.isNaN(date.getTime())) return '—'

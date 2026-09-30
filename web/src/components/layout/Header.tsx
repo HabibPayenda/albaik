@@ -5,7 +5,7 @@ import { ChevronDown, Menu, Search, X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { toggleMobileNav, toggleSearch } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { cn } from '@/lib/utils'
+import { cn, opensInNewTab } from '@/lib/utils'
 import { Icon } from '@/components/ui/Icon'
 import { BrandMark } from '@/components/ui/BrandMark'
 import { LocaleSwitcher } from './LocaleSwitcher'
@@ -215,53 +215,69 @@ export function Header() {
                       : undefined
                   }
                 >
-                  <RouterNavLink
-                    to={link.path}
-                    aria-haspopup={isCollections ? 'true' : undefined}
-                    aria-expanded={isCollections ? megaOpen : undefined}
-                    aria-controls={isCollections ? 'collections-mega' : undefined}
-                    onKeyDown={
-                      isCollections
-                        ? (event) => {
-                            if (event.key === 'ArrowDown') {
-                              event.preventDefault()
-                              focusPanelOnOpen.current = true
-                              openMega()
+                  {opensInNewTab(link.openInNewTab, link.path) ? (
+                    /* The flag only applies to an address that can leave the site; the
+                       desktop item gets the same quiet treatment as its neighbours, with
+                       the outward arrow instead of the collection chevron. */
+                    <a
+                      href={link.path}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="group/nav relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-label-lg text-white/75 transition-colors hover:text-white"
+                    >
+                      {link.label}
+                      <Icon name="north_east" size={13} className="shrink-0 opacity-70" />
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  ) : (
+                    <RouterNavLink
+                      to={link.path}
+                      aria-haspopup={isCollections ? 'true' : undefined}
+                      aria-expanded={isCollections ? megaOpen : undefined}
+                      aria-controls={isCollections ? 'collections-mega' : undefined}
+                      onKeyDown={
+                        isCollections
+                          ? (event) => {
+                              if (event.key === 'ArrowDown') {
+                                event.preventDefault()
+                                focusPanelOnOpen.current = true
+                                openMega()
+                              }
                             }
-                          }
-                        : undefined
-                    }
-                    className={({ isActive }) =>
-                      cn(
-                        'group/nav relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-label-lg transition-colors',
-                        isActive ? 'text-white' : 'text-white/75 hover:text-white',
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {link.label}
-                        {isCollections ? (
-                          <ChevronDown
-                            size={14}
-                            className={cn(
-                              'transition-transform duration-300',
-                              megaOpen && 'rotate-180',
-                            )}
-                          />
-                        ) : null}
-                        {/* Gold underline indicator instead of a filled pill — quieter,
-                            and it does not resize the bar when the active item changes. */}
-                        {isActive ? (
-                          <motion.span
-                            layoutId="nav-underline"
-                            transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                            className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent-gold"
-                          />
-                        ) : null}
-                      </>
-                    )}
-                  </RouterNavLink>
+                          : undefined
+                      }
+                      className={({ isActive }) =>
+                        cn(
+                          'group/nav relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-label-lg transition-colors',
+                          isActive ? 'text-white' : 'text-white/75 hover:text-white',
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {link.label}
+                          {isCollections ? (
+                            <ChevronDown
+                              size={14}
+                              className={cn(
+                                'transition-transform duration-300',
+                                megaOpen && 'rotate-180',
+                              )}
+                            />
+                          ) : null}
+                          {/* Gold underline indicator instead of a filled pill — quieter,
+                              and it does not resize the bar when the active item changes. */}
+                          {isActive ? (
+                            <motion.span
+                              layoutId="nav-underline"
+                              transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                              className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent-gold"
+                            />
+                          ) : null}
+                        </>
+                      )}
+                    </RouterNavLink>
+                  )}
                 </div>
               )
             })}
@@ -403,10 +419,9 @@ export function Header() {
                     Quick links
                   </span>
                   {(quickLinksConfigured ? quickLinks : DEFAULT_QUICK_LINKS).map((link) =>
-                    // Only absolute URLs can meaningfully open in a new tab; an internal
-                    // route must keep the SPA's client-side navigation or the click would
-                    // force a full page reload.
-                    link.openInNewTab && /^https?:\/\//i.test(link.path) ? (
+                    // The rule lives in `opensInNewTab`: only absolute addresses can open
+                    // in a new tab, an internal route keeps the SPA's navigation.
+                    opensInNewTab(link.openInNewTab, link.path) ? (
                       <a
                         key={link.id}
                         href={link.path}
@@ -416,6 +431,7 @@ export function Header() {
                       >
                         {link.label}
                         <Icon name="north_east" size={13} />
+                        <span className="sr-only"> (opens in a new tab)</span>
                       </a>
                     ) : (
                       <Link
@@ -485,21 +501,38 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
               <ul className="flex flex-col gap-1">
                 {nav.map((link) => (
                   <li key={link.id}>
-                    <RouterNavLink
-                      to={link.path}
-                      onClick={onClose}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center justify-between rounded-xl px-space-md py-3 text-body-md transition-colors',
-                          isActive
-                            ? 'bg-white/15 font-semibold text-white'
-                            : 'text-white/80 hover:bg-white/10',
-                        )
-                      }
-                    >
-                      {link.label}
-                      <Icon name="chevron_right" size={16} className="opacity-50" />
-                    </RouterNavLink>
+                    {opensInNewTab(link.openInNewTab, link.path) ? (
+                      /* The drawer still closes — leaving the site should not strand the
+                         menu open behind the new tab — and the outward arrow replaces the
+                         chevron, which promised another level inside this one. */
+                      <a
+                        href={link.path}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        onClick={onClose}
+                        className="flex items-center justify-between rounded-xl px-space-md py-3 text-body-md text-white/80 transition-colors hover:bg-white/10"
+                      >
+                        {link.label}
+                        <Icon name="north_east" size={16} className="opacity-50" />
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    ) : (
+                      <RouterNavLink
+                        to={link.path}
+                        onClick={onClose}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center justify-between rounded-xl px-space-md py-3 text-body-md transition-colors',
+                            isActive
+                              ? 'bg-white/15 font-semibold text-white'
+                              : 'text-white/80 hover:bg-white/10',
+                          )
+                        }
+                      >
+                        {link.label}
+                        <Icon name="chevron_right" size={16} className="opacity-50" />
+                      </RouterNavLink>
+                    )}
                   </li>
                 ))}
               </ul>

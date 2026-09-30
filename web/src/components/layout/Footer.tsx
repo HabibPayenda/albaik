@@ -5,7 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { subscribeNewsletter } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useI18n } from '@/i18n'
-import { cn } from '@/lib/utils'
+import { cn, opensInNewTab } from '@/lib/utils'
 import { configuredSocials } from '@/lib/social'
 import { Icon } from '@/components/ui/Icon'
 import { BrandMark } from '@/components/ui/BrandMark'
@@ -115,12 +115,27 @@ export function Footer() {
                 <ul className="flex flex-col gap-2">
                   {links.map((link) => (
                     <li key={link.id}>
-                      <Link
-                        to={link.path}
-                        className="text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
-                      >
-                        {link.label}
-                      </Link>
+                      {/* `opensInNewTab` decides: an absolute address staff flagged
+                          leaves in a new tab, an internal route keeps client-side
+                          navigation, and an unflagged link is untouched. */}
+                      {opensInNewTab(link.openInNewTab, link.path) ? (
+                        <a
+                          href={link.path}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
+                        >
+                          {link.label}
+                          <span className="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      ) : (
+                        <Link
+                          to={link.path}
+                          className="text-body-sm text-on-surface-variant transition-colors hover:text-secondary"
+                        >
+                          {link.label}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>
