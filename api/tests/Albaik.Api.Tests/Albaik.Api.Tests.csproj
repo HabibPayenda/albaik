@@ -22,6 +22,9 @@
   <ItemGroup>
     <!-- The importer test drives the one-off tool, never the running API. -->
     <ProjectReference Include="..\..\Albaik.Importer\Albaik.Importer.csproj" />
+    <!-- The API factory copies this into its throwaway web root so the SEO shell has a
+         built-SPA-shaped template to work from. -->
+    <None Update="fixtures\spa-index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

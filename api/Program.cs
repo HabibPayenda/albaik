@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Albaik.Api.Data;
+using Albaik.Api.Seo;
 using Albaik.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -22,8 +23,10 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseMySql(connectionString, new MariaDbServerVersion(new Version(10, 10, 0))));
 
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<SeoRouteResolver>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<ImagePipeline>();
+builder.Services.AddSingleton<SeoShellRenderer>();
 
 builder.Services.AddControllers().AddJsonOptions(o =>
 {
@@ -79,6 +82,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("spa");
+
+// Public page shells are generated per request from the database (ticket 05: home only).
+// Running before default files is what turns `/` into the shell instead of the bare
+// SPA index; anything the resolver does not handle continues to the static-file pipeline.
+app.UseMiddleware<SeoShellMiddleware>();
 
 // Serve uploaded images (and the built SPA, when present) straight from wwwroot.
 Directory.CreateDirectory(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"));
