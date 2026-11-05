@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Albaik.Importer</RootNamespace>
+    <AssemblyName>Albaik.Importer</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Read-only access to the legacy SQLite file. The API itself no longer references SQLite. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <!--
+      Transitive from Microsoft.Data.Sqlite 9.0.0, pinned forward because 2.1.10 carries
+      a high-severity SQLite advisory (GHSA-2m69-gcr7-jv3q). This only affects the
+      one-off importer process, never the API.
+    -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Albaik.Api.csproj" />
+  </ItemGroup>
+
+</Project>

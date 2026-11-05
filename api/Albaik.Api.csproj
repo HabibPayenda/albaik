@@ -12,11 +12,17 @@
     <None Update="Assets\crown-navy.webp" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- The integration test suite lives under tests/ but must never compile into the API. -->
+  <!--
+    The integration test suite lives under tests/ and the one-off importer lives under
+    Albaik.Importer/; neither may compile into the running API.
+  -->
   <ItemGroup>
     <Compile Remove="tests/**" />
     <Content Remove="tests/**" />
     <None Remove="tests/**" />
+    <Compile Remove="Albaik.Importer/**" />
+    <Content Remove="Albaik.Importer/**" />
+    <None Remove="Albaik.Importer/**" />
   </ItemGroup>
 
   <ItemGroup>

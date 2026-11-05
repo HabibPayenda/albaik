@@ -7,6 +7,12 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    /// <summary>
+    /// Lets a derived context (the one-off importer) reuse this exact model while
+    /// supplying options for its own context type.
+    /// </summary>
+    protected AppDbContext(DbContextOptions options) : base(options) { }
+
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Product> Products => Set<Product>();
