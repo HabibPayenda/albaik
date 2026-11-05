@@ -80,6 +80,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("spa");
 
+// One canonical address per page, answered before the SPA fallback (ticket 10).
+app.UseCanonicalRedirects();
+
 // Serve uploaded images (and the built SPA, when present) straight from wwwroot.
 Directory.CreateDirectory(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"));
 app.UseDefaultFiles();

@@ -324,12 +324,11 @@ public class AdminCatalogController : ControllerBase
 
     private async Task<string> PublicBaseUrlAsync()
     {
-        var configured = await _db.SiteSettings
-            .Where(s => s.Key == "site.publicBaseUrl")
-            .Select(s => s.Value)
-            .FirstOrDefaultAsync();
+        var configured = await PublicSiteUrl.ReadAsync(_db, CancellationToken.None);
+        if (configured is not null) return configured;
 
-        if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim().TrimEnd('/');
+        // Development fallback: a QR proof generated from a laptop must still encode
+        // the host the request arrived on. Never a guessed production domain.
         return $"{Request.Scheme}://{Request.Host}";
     }
 
