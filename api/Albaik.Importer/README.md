@@ -36,10 +36,11 @@ dotnet run --project api/Albaik.Importer -- `
 | `--force` | Truncate the imported tables instead of refusing a non-empty target (safe retry). |
 | `-h`, `--help` | Print usage. |
 
-A normal first import is `--migrate` on an empty database. A rerun after a failed or
-interrupted import is `--force`, which truncates and replaces the imported tables.
-Without `--force`, the importer refuses a target that already has rows and writes
-nothing.
+A normal first import is `--migrate` on an empty database. `--migrate` applies the
+migrations but does not create the database itself, so create the empty database and
+grant the user access first. A rerun after a failed or interrupted import is
+`--force`, which truncates and replaces the imported tables. Without `--force`, the
+importer refuses a target that already has rows and writes nothing.
 
 ## What it proves before reporting success
 
