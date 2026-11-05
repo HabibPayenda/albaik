@@ -10,7 +10,7 @@ page and menu entry is editable from the admin dashboard.
 
 ```
 Albaik/
-├── api/                          .NET 10 Web API + EF Core + SQLite
+├── api/                          .NET 10 Web API + EF Core + MariaDB
 ├── web/                          React 19 + Vite + Tailwind v4 SPA (PWA)
 ├── AlbaikDesign/                 Source design system and HTML mockups
 └── Albaik_Website_Content_2026_English.docx    Approved copy (source of truth)
@@ -25,6 +25,12 @@ Albaik/
 | .NET SDK | 10.0.301 |
 | Node.js | 22.22.2 |
 | npm | bundled with Node |
+| MariaDB | 10.5 or newer (local: 13.0.2; production target: 10.10) |
+
+MariaDB 10.5+ is a hard prerequisite. MySQL 8.0 is also supported if the host
+changes; MySQL 5.7 is end of life and is not supported. The API uses
+Pomelo.EntityFrameworkCore.MySql 9.0.0 with EF Core 9.0.x and pins MariaDB 10.10
+as the server version, so local and production generate the same SQL.
 
 No global installs are needed. No CDN access is required at runtime — fonts, icons
 and styles are all bundled so the site works offline.
@@ -42,9 +48,22 @@ cd api
 dotnet run --urls http://localhost:5080
 ```
 
-On first run the API creates `api/albaik.db` and seeds it with the catalogue and
-site content taken from the approved `.docx`. The seed is idempotent — restarting
-does not duplicate rows.
+The API needs a MariaDB database. On first run it applies the checked-in EF
+migrations (creating the schema) and seeds the catalogue and site content taken
+from the approved `.docx`. The seed is idempotent — restarting does not duplicate
+rows, and it skips catalogue/settings content that was already imported.
+
+Create the local database once:
+
+```sql
+CREATE DATABASE albaik CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+`api/appsettings.Development.json` points at the local
+`Server=127.0.0.1;Port=3306;User=root;Password=;Database=albaik;CharSet=utf8mb4`
+instance. Production supplies the real connection string through
+`ConnectionStrings__Default` (see [Configuration](#configuration)); it is never
+committed.
 
 ### 2. SPA — http://localhost:5173
 
@@ -186,7 +205,7 @@ HTML-only mail is unreadable in text clients and scores worse with spam filters.
 
 | Key | Purpose |
 |---|---|
-| `ConnectionStrings:Default` | SQLite file path (default `Data Source=albaik.db`) |
+| `ConnectionStrings:Default` | MariaDB connection string. Empty in `appsettings.json`; supply it with the `ConnectionStrings__Default` environment variable (or host configuration). |
 | `Cors:Origins` | Comma-separated allowed origins for the dev SPA |
 | `Jwt:Key` | Signing key — **must be at least 32 bytes**. Replace in production. |
 | `Jwt:ExpiryHours` | Admin session length (default 12) |
@@ -201,11 +220,74 @@ HTML-only mail is unreadable in text clients and scores worse with spam filters.
 
 ---
 
+## Database operations
+
+### Migrations
+
+```bash
+dotnet ef migrations add <Name> --project api --output-dir Migrations
+dotnet ef database update --project api
+```
+
+Run these with `ConnectionStrings__Default` pointing at the target database (or rely
+on the Development connection string). The startup migration path is enough for a
+normal deploy; apply migrations explicitly only when the host runs schema changes as
+a separate step.
+
+### Importing an existing SQLite database
+
+The one-off importer lives in `api/Albaik.Importer` and is not part of the running
+API. Pass a **copy** of the live SQLite file and the target MariaDB connection string:
+
+```bash
+dotnet run --project api/Albaik.Importer -- \
+  --source C:\backup\albaik.db \
+  --target "Server=127.0.0.1;Port=3306;User=root;Password=;Database=albaik;CharSet=utf8mb4" \
+  --migrate
+```
+
+It preserves primary keys, timestamps, admin password hashes and Verification codes,
+and verifies per-table row counts and content checksums. Re-run a failed import with
+`--force`. See `api/Albaik.Importer/README.md` for options and exit codes.
+
+### Tests
+
+The integration suite boots the real API against a uniquely named MariaDB database
+and drops it afterwards. It needs a reachable server; override the default
+(`127.0.0.1:3306`, `root`, blank password) with `ALBAIK_TEST_MYSQL`:
+
+```bash
+export ALBAIK_TEST_MYSQL="Server=127.0.0.1;Port=3306;User=root;Password=;CharSet=utf8mb4"
+dotnet test api/tests/Albaik.Api.Tests/Albaik.Api.Tests.csproj
+```
+
+The suite fails with a clear prerequisite message if MariaDB is unreachable.
+
+### Cutover
+
+The production switch from the legacy SQLite file to MariaDB — pre-flight backup,
+ordered cutover, smoke tests, rollback and retention — is documented in
+[`docs/mariadb-cutover.md`](docs/mariadb-cutover.md). The staging rehearsal is a
+required gate before production.
+
+---
+
 ## Project notes
 
-- **No EF migrations.** The schema is created with `EnsureCreatedAsync()` and the
-  seeder is idempotent. Changing an entity means deleting `albaik.db` in
-  development, or writing a migration before this goes near real data.
+- **Migrations own the schema.** The API calls `MigrateAsync()` at startup and never
+  calls `EnsureCreatedAsync()`; the old SQLite schema guard is gone. Add a migration,
+  review it, apply it, and never edit the database by hand:
+
+  ```bash
+  # from the repository root
+  dotnet ef migrations add <Name> --project api --output-dir Migrations
+  dotnet ef migrations script --project api            # optional: review the SQL
+  dotnet ef database update --project api              # apply to ConnectionStrings:Default
+  ```
+
+  Startup fails fast with a clear message if `ConnectionStrings:Default` is missing,
+  and a failed migration stops startup rather than serving a half-migrated database.
+  The health endpoint (`/api/health`) reports database connectivity.
 - **Design tokens** live in `web/src/index.css` under Tailwind v4's `@theme`.
   There is no `tailwind.config.js`; the palette and type scale come from
   `AlbaikDesign/design.md/DESIGN.md` ("Royal Sapphire Luminescence").
