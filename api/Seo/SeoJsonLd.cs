@@ -74,11 +74,37 @@ internal static class SeoJsonLd
         };
     }
 
-    public static Dictionary<string, object?> ListItem(int position, string name, string url) => new()
+    public static Dictionary<string, object?> ListItem(int position, string name, string? url)
     {
-        ["@type"] = "ListItem",
-        ["position"] = position,
-        ["name"] = name,
-        ["url"] = url,
-    };
+        var item = new Dictionary<string, object?>
+        {
+            ["@type"] = "ListItem",
+            ["position"] = position,
+            ["name"] = name,
+        };
+        // A breadcrumb level with no route of its own ("Guides") still names its place
+        // in the hierarchy; only the link is omitted.
+        if (url is not null) item["url"] = url;
+        return item;
+    }
+
+    /// <summary>
+    /// A BreadcrumbList matching the visible breadcrumbs. Each level after the first
+    /// carries its absolute URL; the current page can omit it when it has no canonical
+    /// address (for example a private or not-found shell).
+    /// </summary>
+    public static Dictionary<string, object?> BreadcrumbList(
+        string canonicalUrl, params (string Name, string? Url)[] items)
+    {
+        var elements = items
+            .Select((item, index) => ListItem(index + 1, item.Name, item.Url))
+            .ToArray();
+
+        return new Dictionary<string, object?>
+        {
+            ["@type"] = "BreadcrumbList",
+            ["@id"] = canonicalUrl + "#breadcrumb",
+            ["itemListElement"] = elements,
+        };
+    }
 }

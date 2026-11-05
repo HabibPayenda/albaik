@@ -12,6 +12,10 @@ public enum SeoPageType
     Home,
     CollectionsIndex,
     Collection,
+    ContentPage,
+    Contact,
+    Verification,
+    NotFound,
 }
 
 /// <summary>
