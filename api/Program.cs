@@ -83,6 +83,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("spa");
 
+// One canonical address per page, answered before the SPA fallback (ticket 10).
+// This must run before the SEO shell so canonical-host/path redirects happen
+// before any shell rendering.
+app.UseCanonicalRedirects();
+
 // Public page shells are generated per request from the database (ticket 05: home only).
 // Running before default files is what turns `/` into the shell instead of the bare
 // SPA index; anything the resolver does not handle continues to the static-file pipeline.

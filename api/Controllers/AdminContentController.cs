@@ -427,10 +427,22 @@ public class AdminContentController : ControllerBase
                 return BadRequest(new { message = problem });
             }
 
+            var value = item.Value;
+            if (item.Key == PublicSiteUrl.SettingKey)
+            {
+                // One setting is the source of redirect Locations and printed QR URLs.
+                // Store it in the only shape those consumers accept: an absolute https
+                // origin with no trailing slash.
+                var stored = PublicSiteUrl.ForStorage(item.Value);
+                if (stored.Problem is not null)
+                    return BadRequest(new { message = stored.Problem });
+                value = stored.Value;
+            }
+
             if (existing.TryGetValue(item.Key, out var row))
-                row.Value = item.Value;
+                row.Value = value;
             else
-                _db.SiteSettings.Add(new SiteSetting { Key = item.Key.Trim(), Value = item.Value, Group = item.Group, Label = item.Label, InputType = item.InputType });
+                _db.SiteSettings.Add(new SiteSetting { Key = item.Key.Trim(), Value = value, Group = item.Group, Label = item.Label, InputType = item.InputType });
         }
         await _db.SaveChangesAsync();
         return await _db.SiteSettings.OrderBy(s => s.Group).ThenBy(s => s.SortOrder).Select(s => s.ToDto()).ToListAsync();
