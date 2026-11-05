@@ -5,14 +5,19 @@ namespace Albaik.Api.Seo;
 /// <summary>
 /// Maps a public URL to the page shell that should be served for it.
 ///
-/// Ticket 05 added the home page; ticket 06 adds the Collections index and one Collection.
-/// Tickets 07/08 extend this with Brand, Product, content, Contact, Verification and
-/// not-found shells. Unknown public paths deliberately return null so the existing SPA
-/// fallback keeps handling them until ticket 08 takes over the 404 shell.
+/// Ticket 05 added the home page; ticket 06 the Collections index and one Collection;
+/// ticket 07 the collection-scoped Brand and the Product. Ticket 08 extends this with
+/// content, Contact, Verification and the general not-found shell.
+///
+/// A missing or inactive Collection, Brand or Product resolves to
+/// <see cref="NotFoundShell"/> with a real 404 rather than null, so it can never fall
+/// through to the SPA's 200 response. Paths outside these page types still return null
+/// until ticket 08 owns them.
 /// </summary>
 public sealed class SeoRouteResolver
 {
     private const string CollectionsPath = "/collections";
+    private const string ProductsPath = "/products";
 
     private readonly AppDbContext _db;
 
@@ -37,14 +42,35 @@ public sealed class SeoRouteResolver
         if (path.StartsWith(CollectionsPath + "/", StringComparison.OrdinalIgnoreCase))
         {
             var remainder = path[(CollectionsPath.Length + 1)..];
-
-            // `/collections/{collection}/{brand}` is the Brand page (ticket 07/08), not a
-            // Collection; leave it to those tickets rather than rendering the collection.
-            if (remainder.Length == 0 || remainder.Contains('/')) return null;
+            var segments = remainder.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0 || segments.Length > 2) return null;
 
             var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
-            return await CollectionPageShell.BuildAsync(
-                _db, site, Uri.UnescapeDataString(remainder), ct);
+            if (segments.Length == 2)
+            {
+                var brand = await BrandPageShell.BuildAsync(
+                    _db,
+                    site,
+                    Uri.UnescapeDataString(segments[0]),
+                    Uri.UnescapeDataString(segments[1]),
+                    ct);
+                return brand ?? NotFoundShell.Build(site, path, "The brand you requested");
+            }
+
+            var collection = await CollectionPageShell.BuildAsync(
+                _db, site, Uri.UnescapeDataString(segments[0]), ct);
+            return collection ?? NotFoundShell.Build(site, path, "The collection you requested");
+        }
+
+        if (path.StartsWith(ProductsPath + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            var slug = path[(ProductsPath.Length + 1)..];
+            if (slug.Length == 0 || slug.Contains('/')) return null;
+
+            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var product = await ProductPageShell.BuildAsync(
+                _db, site, Uri.UnescapeDataString(slug), ct);
+            return product ?? NotFoundShell.Build(site, path, "The product you requested");
         }
 
         return null;

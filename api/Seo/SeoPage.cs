@@ -12,6 +12,9 @@ public enum SeoPageType
     Home,
     CollectionsIndex,
     Collection,
+    Brand,
+    Product,
+    NotFound,
 }
 
 /// <summary>
