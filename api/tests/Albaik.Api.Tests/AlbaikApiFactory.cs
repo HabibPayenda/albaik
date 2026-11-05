@@ -46,6 +46,13 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
         // never leaves files in the real wwwroot/uploads.
         _webRoot = Path.Combine(Path.GetTempPath(), $"albaik-tests-webroot-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_webRoot);
+
+        // The SEO shell uses the built SPA index.html as its template. Production builds
+        // copy web/dist into wwwroot; the throwaway web root gets a fixture with the same
+        // shape (asset tags, manifest, service-worker registration and an empty React root).
+        var template = Path.Combine(AppContext.BaseDirectory, "fixtures", "spa-index.html");
+        if (File.Exists(template))
+            File.Copy(template, Path.Combine(_webRoot, "index.html"));
     }
 
     /// <summary>The unique MariaDB database this factory owns.</summary>

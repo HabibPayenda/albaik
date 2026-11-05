@@ -19,4 +19,10 @@
     <ProjectReference Include="..\..\Albaik.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The API factory copies this into its throwaway web root so the SEO shell has a
+         built-SPA-shaped template to work from. -->
+    <None Update="fixtures\spa-index.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
