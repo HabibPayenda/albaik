@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Albaik.Api.Dtos;
-using Microsoft.Data.Sqlite;
+using MySqlConnector;
 using Xunit;
 
 namespace Albaik.Api.Tests;
@@ -65,22 +65,24 @@ public class SiteCopySettingsTests : IClassFixture<AlbaikApiFactory>
         // seed would skip them forever (the categories early-return). Boot once to
         // produce a seeded database, remove the rows, and require the reboot to put
         // them back with the exact current text.
-        var dbPath = Path.Combine(Path.GetTempPath(), $"albaik-upgrade-labels-{Guid.NewGuid():N}.db");
-        using (var first = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: true))
+        var databaseName = $"albaik_upgrade_labels_{Guid.NewGuid():N}";
+        string connectionString;
+        using (var first = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: true))
         using (var client = first.CreateClient())
         {
+            connectionString = first.ConnectionString;
             (await client.GetAsync("/api/home")).EnsureSuccessStatusCode();
         }
 
-        await using (var connection = new SqliteConnection($"Data Source={dbPath}"))
+        await using (var connection = new MySqlConnection(connectionString))
         {
             await connection.OpenAsync();
             await using var del = connection.CreateCommand();
-            del.CommandText = "DELETE FROM \"SiteSettings\" WHERE \"Key\" LIKE 'labels.%'";
+            del.CommandText = "DELETE FROM `SiteSettings` WHERE `Key` LIKE 'labels.%'";
             await del.ExecuteNonQueryAsync();
         }
 
-        using var factory = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: false);
+        using var factory = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: false);
         using var admin = factory.AdminClient();
         var settings = await admin.GetFromJsonAsync<List<SiteSettingDto>>("/api/admin/settings");
 

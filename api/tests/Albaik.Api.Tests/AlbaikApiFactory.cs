@@ -2,40 +2,67 @@ using System.Net.Http.Json;
 using Albaik.Api.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using MySqlConnector;
 
 namespace Albaik.Api.Tests;
 
 /// <summary>
-/// Boots the real API with a throwaway SQLite file so every suite sees the exact
-/// seeded copy the production app would create on first start. The database is
-/// populated by <see cref="Program"/>'s own startup seeding, so tests exercise the
-/// same pipeline a fresh deployment does.
+/// Boots the real API against a uniquely named MariaDB database so every suite sees
+/// the exact migrated and seeded copy the production app would create. The database is
+/// created by the API's own startup migrations, so tests exercise the same pipeline a
+/// fresh deployment does. The database is dropped when the factory is disposed.
+///
+/// The server connection can be overridden with the ALBAIK_TEST_MYSQL environment
+/// variable, e.g. "Server=db;Port=3306;User=test;Password=test". The database name is
+/// always replaced with the factory's unique one.
 /// </summary>
 public class AlbaikApiFactory : WebApplicationFactory<Program>
 {
-    private readonly string _dbPath;
+    private const string DefaultConnectionBase =
+        "Server=127.0.0.1;Port=3306;User=root;Password=;CharSet=utf8mb4";
+
+    private readonly string _databaseName;
+    private readonly string _connectionString;
     private readonly string _webRoot;
     private readonly bool _keepDatabase;
 
     /// <summary>
-    /// Builds a factory pointed at an existing SQLite file instead of the throwaway, for
-    /// upgrade scenarios that boot the API twice against the same database. xUnit only
-    /// tolerates one public constructor (used for class fixtures), so this entry point is
-    /// static rather than a second constructor.
+    /// Builds a factory pointed at an existing MariaDB test database instead of a
+    /// throwaway one, for upgrade scenarios that boot the API twice against the same
+    /// database. xUnit only tolerates one public constructor (used for class fixtures),
+    /// so this entry point is static rather than a second constructor.
     /// </summary>
-    public static AlbaikApiFactory ForUpgradeScenario(string dbPath, bool keepDatabaseForFirstBoot)
-        => new(dbPath, keepDatabaseForFirstBoot);
+    public static AlbaikApiFactory ForUpgradeScenario(string databaseName, bool keepDatabaseForFirstBoot)
+        => new(databaseName, keepDatabaseForFirstBoot);
 
     public AlbaikApiFactory() : this(null, false) { }
 
-    private AlbaikApiFactory(string? dbPath, bool keepDatabase)
+    private AlbaikApiFactory(string? databaseName, bool keepDatabase)
     {
-        _dbPath = dbPath ?? Path.Combine(Path.GetTempPath(), $"albaik-tests-{Guid.NewGuid():N}.db");
+        _databaseName = databaseName ?? $"albaik_tests_{Guid.NewGuid():N}";
         _keepDatabase = keepDatabase;
+        _connectionString = ConnectionStringFor(_databaseName);
         // Uploads write under the web root; point it at a throwaway directory so a test
         // never leaves files in the real wwwroot/uploads.
         _webRoot = Path.Combine(Path.GetTempPath(), $"albaik-tests-webroot-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_webRoot);
+    }
+
+    /// <summary>The unique MariaDB database this factory owns.</summary>
+    public string DatabaseName => _databaseName;
+
+    /// <summary>The connection string for <see cref="DatabaseName"/>.</summary>
+    public string ConnectionString => _connectionString;
+
+    private static string ConnectionBase =>
+        Environment.GetEnvironmentVariable("ALBAIK_TEST_MYSQL") is { Length: > 0 } configured
+            ? configured
+            : DefaultConnectionBase;
+
+    private static string ConnectionStringFor(string databaseName)
+    {
+        var builder = new MySqlConnectionStringBuilder(ConnectionBase) { Database = databaseName };
+        return builder.ConnectionString;
     }
 
     private Lazy<string>? _token;
@@ -45,10 +72,8 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         // Host settings flow into builder.Configuration before Program's top-level
         // statements run, so the JWT key and DB connection the API stabilizes at
-        // startup are the test values. A ConfigureAppConfiguration in-memory add
-        // would only surface after Build(), leaving Program to read the real key
-        // and the developer's albaik.db.
-        builder.UseSetting("ConnectionStrings:Default", $"Data Source={_dbPath}");
+        // startup are the test values.
+        builder.UseSetting("ConnectionStrings:Default", _connectionString);
         builder.UseSetting("Jwt:Key", "test-signing-key-at-least-32-bytes-long-0123456789");
         builder.UseWebRoot(_webRoot);
     }
@@ -75,15 +100,30 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
         return client;
     }
 
+    /// <summary>Drops the test database, e.g. to simulate the database going away.</summary>
+    public void DropDatabase()
+    {
+        MySqlConnection.ClearAllPools();
+        var builder = new MySqlConnectionStringBuilder(ConnectionBase) { Database = "" };
+        using var connection = new MySqlConnection(builder.ConnectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"DROP DATABASE IF EXISTS `{_databaseName.Replace("`", "``")}`";
+        command.ExecuteNonQuery();
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing && !_keepDatabase && File.Exists(_dbPath))
+        if (!disposing) return;
+
+        if (!_keepDatabase)
         {
-            try { File.Delete(_dbPath); }
-            catch (IOException) { }
+            try { DropDatabase(); }
+            catch (MySqlException) { }
         }
-        if (disposing && Directory.Exists(_webRoot))
+
+        if (Directory.Exists(_webRoot))
         {
             try { Directory.Delete(_webRoot, recursive: true); }
             catch (IOException) { }

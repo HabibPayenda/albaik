@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Albaik.Api.Dtos;
-using Microsoft.Data.Sqlite;
+using MySqlConnector;
 using Xunit;
 
 namespace Albaik.Api.Tests;
@@ -119,35 +119,35 @@ public class QuickLinkEndpointTests : IClassFixture<AlbaikApiFactory>
     }
 
     [Fact]
-    public async Task UpgradedDatabase_GainsQuickLinksTableAndDefaults()
+    public async Task MissingQuickLinks_AreRestoredFromDefaults()
     {
-        // Simulate a deployment that predates the feature: boot once to produce a real
-        // seeded database, then knock the newly added table out by hand, exactly the state
-        // an existing site (SchemaGuard adds the empty table, the category gate skips the
-        // bulk seed) would be in on the first boot after upgrade. Reboot must re-create the
-        // table and top the defaults up.
-        var dbPath = Path.Combine(Path.GetTempPath(), $"albaik-upgrade-{Guid.NewGuid():N}.db");
-        using (var first = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: true))
+        // Migrations always create the table, so the remaining observable upgrade case is
+        // rows that are absent: boot once to produce a real migrated and seeded database,
+        // remove the rows, and require the next boot to top the defaults back up.
+        var databaseName = $"albaik_upgrade_quicklinks_{Guid.NewGuid():N}";
+        string connectionString;
+        using (var first = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: true))
         using (var client = first.CreateClient())
         {
+            connectionString = first.ConnectionString;
             var ok = await client.GetAsync("/api/home");
             ok.EnsureSuccessStatusCode();
         }
 
-        await using (var connection = new SqliteConnection($"Data Source={dbPath}"))
+        await using (var connection = new MySqlConnection(connectionString))
         {
             await connection.OpenAsync();
-            await using var drop = connection.CreateCommand();
-            drop.CommandText = "DROP TABLE \"QuickLinks\"";
-            await drop.ExecuteNonQueryAsync();
+            await using var delete = connection.CreateCommand();
+            delete.CommandText = "DELETE FROM `QuickLinks`";
+            await delete.ExecuteNonQueryAsync();
         }
 
-        using var factory = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: false);
+        using var factory = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: false);
         using var booted = factory.AdminClient();
         var bootstrap = await booted.GetFromJsonAsync<SiteBootstrapDto>("/api/bootstrap");
 
         Assert.NotNull(bootstrap);
-        Assert.True(bootstrap!.HasQuickLinks, "upgrade must top the defaults back up");
+        Assert.True(bootstrap!.HasQuickLinks, "a boot with no rows must top the defaults back up");
         var labels = bootstrap.QuickLinks.Select(q => q.Label).ToHashSet();
         Assert.Equal(new[] { "All products", "Shampoo guide", "Quality & Verification", "Distribution & Wholesale" }, labels);
     }

@@ -15,7 +15,8 @@ wwwroot/uploads/*
 !wwwroot/uploads/.gitkeep
 
 ## Local overrides (SMTP credentials, production JWT key, real connection string)
-appsettings.Development.json
+## appsettings.Development.json is committed: it holds only the local, credential-free
+## MariaDB connection string. Real secrets belong in appsettings.Local.json or env vars.
 appsettings.Local.json
 
 ## Mail captured by tools/smtp-sink.py while testing the contact form
