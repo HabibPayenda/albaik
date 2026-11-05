@@ -32,6 +32,34 @@ public static class SeoUrl
 /// </summary>
 public static class SeoText
 {
+    public const int DescriptionMinLength = 120;
+    public const int DescriptionMaxLength = 160;
+
+    /// <summary>
+    /// The truthful padding sentence used when a page's own copy is shorter than the
+    /// 120-character minimum. It names only what the catalogue actually contains.
+    /// </summary>
+    private const string DescriptionTail =
+        "Explore the full Albaik catalogue for personal-care, hair-care, skin-care and oral-care products. "
+        + "Browse by collection to find products for your everyday needs.";
+
+    /// <summary>
+    /// Joins the page's own copy fragments into one snippet. Short copy is padded with
+    /// <see cref="DescriptionTail"/> so every description lands inside 120-160
+    /// characters, and over-long copy is clamped at a word boundary.
+    /// </summary>
+    public static string ComposeDescription(params string?[] parts)
+    {
+        var text = string.Join(" ",
+            parts.Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part!.Trim()));
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+
+        if (text.Length == 0) text = DescriptionTail;
+        else if (text.Length < DescriptionMinLength) text = text + " " + DescriptionTail;
+
+        return ClampDescription(text, DescriptionMaxLength);
+    }
+
     public static string ClampDescription(string? value, int maxLength = 160)
     {
         var text = Regex.Replace((value ?? string.Empty).Trim(), @"\s+", " ");
