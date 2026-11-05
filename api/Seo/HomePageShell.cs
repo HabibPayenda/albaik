@@ -236,46 +236,7 @@ public static class HomePageShell
     }
 
     private static object BuildStructuredData(SiteSettingsSnapshot site)
-    {
-        var rootUrl = SeoUrl.Absolute(site.BaseUrl, "/");
-        var organization = new Dictionary<string, object?>
-        {
-            ["@type"] = "Organization",
-            ["@id"] = rootUrl + "#organization",
-            ["name"] = site.Name,
-            ["url"] = rootUrl,
-            ["logo"] = SeoUrl.Absolute(site.BaseUrl, OpenGraphImagePath),
-        };
-
-        if (site.Phone is not null || site.ContactEmail is not null)
-        {
-            var contactPoint = new Dictionary<string, object?>
-            {
-                ["@type"] = "ContactPoint",
-                ["contactType"] = "customer service",
-            };
-            if (site.Phone is not null) contactPoint["telephone"] = site.Phone;
-            if (site.ContactEmail is not null) contactPoint["email"] = site.ContactEmail;
-            organization["contactPoint"] = contactPoint;
-        }
-
-        if (site.Address is not null) organization["address"] = site.Address;
-        if (site.SameAs.Count > 0) organization["sameAs"] = site.SameAs;
-
-        var website = new Dictionary<string, object?>
-        {
-            ["@type"] = "WebSite",
-            ["@id"] = rootUrl + "#website",
-            ["name"] = site.Name,
-            ["url"] = rootUrl,
-        };
-
-        return new Dictionary<string, object?>
-        {
-            ["@context"] = "https://schema.org",
-            ["@graph"] = new object[] { organization, website },
-        };
-    }
+        => SeoJsonLd.Graph(SeoJsonLd.SiteNodes(site));
 
     private static string JoinHeadline(string? title, string? accent)
     {

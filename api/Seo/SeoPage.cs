@@ -10,8 +10,16 @@ namespace Albaik.Api.Seo;
 public enum SeoPageType
 {
     Home,
+    CollectionsIndex,
+    Collection,
 }
 
+/// <summary>
+/// The crawl directive for a page. <see cref="Robots"/> is null for indexable pages, so
+/// no robots meta is emitted and the page inherits the site's default. Filtered and
+/// search views set <c>noindex, follow</c>; private surfaces (ticket 08) can set
+/// <c>noindex, nofollow</c>.
+/// </summary>
 public sealed record SeoPage(
     SeoPageType Type,
     int StatusCode,
@@ -26,4 +34,5 @@ public sealed record SeoPage(
     int OpenGraphImageHeight,
     string OpenGraphImageAlt,
     object StructuredData,
-    string ContentHtml);
+    string ContentHtml,
+    string? Robots = null);

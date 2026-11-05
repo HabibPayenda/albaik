@@ -90,6 +90,8 @@ public sealed class SeoShellRenderer
         sb.AppendLine();
         AppendMeta(sb, "name", "description", page.Description);
         AppendLink(sb, "canonical", page.CanonicalUrl);
+        if (!string.IsNullOrWhiteSpace(page.Robots))
+            AppendMeta(sb, "name", "robots", page.Robots);
 
         AppendMeta(sb, "property", "og:type", page.OpenGraphType);
         AppendMeta(sb, "property", "og:site_name", page.SiteName);
@@ -147,6 +149,7 @@ public sealed class SeoShellRenderer
         var name = Attr(tag, "name");
         var property = Attr(tag, "property");
         return string.Equals(name, "description", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "robots", StringComparison.OrdinalIgnoreCase)
             || (name?.StartsWith("twitter:", StringComparison.OrdinalIgnoreCase) ?? false)
             || (property?.StartsWith("og:", StringComparison.OrdinalIgnoreCase) ?? false);
     }
