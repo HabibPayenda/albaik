@@ -85,6 +85,18 @@ public sealed class ImagePipeline
 
         /// <summary>Ceilings for hero backdrops: viewport-sized, same byte budget.</summary>
         public static readonly Limits Backdrop = new(ImagePipeline.MaxBackdropBytes, ImagePipeline.MaxBackdropDimension);
+
+        /// <summary>
+        /// Ceilings for the art-directed backdrop breakpoints. Each breakpoint has its own
+        /// displayed size, so each gets its own longest edge under the same byte budget;
+        /// storing a phone banner at 2560px would spend bytes no phone can show. The mobile
+        /// ceiling is its *height* (the artwork is portrait, 1080×1441), because "longest
+        /// edge" on a portrait file is the vertical one.
+        /// </summary>
+        public static readonly Limits BackdropUltrawide = new(ImagePipeline.MaxBackdropBytes, 2560);
+        public static readonly Limits BackdropDesktop = new(ImagePipeline.MaxBackdropBytes, 1920);
+        public static readonly Limits BackdropTablet = new(ImagePipeline.MaxBackdropBytes, 1536);
+        public static readonly Limits BackdropMobile = new(ImagePipeline.MaxBackdropBytes, 1440);
     }
 
     /// <summary>Quality descent, highest first. Cheapest acceptable result wins.</summary>

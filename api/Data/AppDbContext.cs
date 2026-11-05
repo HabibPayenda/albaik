@@ -46,6 +46,10 @@ public class AppDbContext : DbContext
         b.Entity<Product>(e =>
         {
             e.HasIndex(x => x.Slug).IsUnique();
+            // Both are catalogue-wide identifiers. SQLite treats NULLs as distinct, so a
+            // product without an IBN is fine while the numbers are still being collected.
+            e.HasIndex(x => x.Ibn).IsUnique();
+            e.HasIndex(x => x.VerificationCode).IsUnique();
             e.Property(x => x.Price).HasColumnType("decimal(18,2)");
             e.Property(x => x.CompareAtPrice).HasColumnType("decimal(18,2)");
             e.HasMany(x => x.Images).WithOne(x => x.Product!).HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);

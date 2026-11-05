@@ -37,9 +37,9 @@ const sectionsConfig: CrudConfig<HomeSection> = {
       </p>
       <p className="text-body-sm text-on-surface-variant">
         <span className="font-semibold text-on-surface">Hero slides</span> are edited on the Hero slides tab, not
-        here. The hero section's own extras (accent word, badge title and subtitle) live in the Extra data field as
-        JSON, e.g.{' '}
-        <code className="font-mono">{'{ "accentWord": "…", "badgeTitle": "…", "badgeSubtitle": "…" }'}</code>.
+        here. The hero section's own extras (the accent word and the default artwork set) live in the Extra data
+        field as JSON, e.g.{' '}
+        <code className="font-mono">{'{ "accentWord": "…" }'}</code>.
       </p>
     </div>
   ),

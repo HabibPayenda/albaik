@@ -17,6 +17,8 @@ export interface ProductCardProps {
   ctaLabel?: string
   compact?: boolean
   priority?: boolean
+  /** Centre the copy on narrow screens, for a page whose whole layout is centred on a phone. */
+  centered?: boolean
 }
 
 /**
@@ -45,6 +47,7 @@ export function ProductCard({
   ctaLabel = 'View details',
   compact = false,
   priority = false,
+  centered = true,
 }: ProductCardProps) {
   const href = `/products/${product.slug}`
   const priced = product.currency || currency
@@ -90,9 +93,9 @@ export function ProductCard({
         ) : null}
       </Link>
 
-      <div className="flex flex-1 flex-col justify-between gap-space-sm">
+      <div className={cn('flex flex-1 flex-col justify-between gap-space-sm', centered && 'text-center md:text-left')}>
         <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
+          <div className={cn('flex items-center justify-between gap-2', centered && 'justify-center md:justify-between')}>
             <span className="truncate text-label-sm font-bold uppercase tracking-wider text-secondary">
               {product.formulationLabel ?? product.brandName ?? product.categoryName}
             </span>
@@ -100,7 +103,7 @@ export function ProductCard({
           </div>
 
           <h3 className="font-display text-headline-sm font-semibold leading-snug text-on-surface transition-colors group-hover:text-secondary">
-            <Link to={href} className="line-clamp-1">
+            <Link to={href} className="md:line-clamp-1">
               {product.name}
             </Link>
           </h3>
@@ -113,7 +116,7 @@ export function ProductCard({
           */}
 
           {product.ingredients?.length ? (
-            <div className="flex flex-wrap gap-1 pt-0.5">
+            <div className={cn('flex flex-wrap gap-1 pt-0.5', centered && 'justify-center md:justify-start')}>
               {product.ingredients.slice(0, compact ? 1 : 2).map((tag) => (
                 <Chip key={tag}>{tag}</Chip>
               ))}
@@ -121,7 +124,7 @@ export function ProductCard({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-space-sm border-t border-outline-variant/30 pt-2">
+        <div className={cn('flex items-center justify-between gap-space-sm border-t border-outline-variant/30 pt-2', centered && 'justify-center md:justify-between')}>
           {/*
             One line, not two. The "Retail price" / "Pricing" eyebrow sat above the
             value and said nothing the value did not — the number is self-evidently

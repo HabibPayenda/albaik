@@ -145,18 +145,18 @@ export function CategoryPage() {
                 <StaggerItem key={brand.id} className="h-full">
                   <Link
                     to={`/collections/${category.slug}/${brand.slug}`}
-                    className="group relative flex h-full flex-col gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:border-accent-gold/50 hover:shadow-e3"
+                    className="group relative flex h-full flex-col items-center gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg text-center shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:border-accent-gold/50 hover:shadow-e3 md:items-stretch md:text-left"
                   >
                     <span
                       className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gold-gradient transition-transform duration-300 group-hover:scale-x-100"
                       aria-hidden="true"
                     />
 
-                    <div className="flex items-start justify-between gap-space-sm">
+                    <div className="flex w-full items-start justify-center gap-space-sm md:justify-between">
                       <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-royal-gradient-compact text-accent-gold shadow-e1">
                         <Icon name="brand" size={22} />
                       </span>
-                      <span className="flex flex-col items-end">
+                      <span className="flex flex-col items-center md:items-end">
                         <span className="font-display text-headline-md font-semibold leading-none tabular-nums text-on-surface">
                           {brand.productCount}
                         </span>

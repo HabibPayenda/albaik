@@ -42,3 +42,9 @@ AlbaikDesign/
 
 # Local API overrides carrying real credentials
 appsettings.Local.json
+# Startup failure report written next to the app (shared hosting has no event log)
+api/startup-error.log
+
+# Local publish/deploy packages
+artifacts/
+

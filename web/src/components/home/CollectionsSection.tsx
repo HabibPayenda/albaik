@@ -60,7 +60,7 @@ export function CollectionsSection({ section }: { section?: HomeSection }) {
               <motion.div
                 whileHover={{ y: -8 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-md shadow-sm transition-shadow duration-300 hover:shadow-e2 md:p-space-lg"
+                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-md text-center shadow-sm transition-shadow duration-300 hover:shadow-e2 md:p-space-lg md:text-left"
               >
                 <div
                   className={cn(
@@ -69,7 +69,7 @@ export function CollectionsSection({ section }: { section?: HomeSection }) {
                   )}
                 />
 
-                <div className="relative z-10 flex flex-1 flex-col gap-space-sm">
+                <div className="relative z-10 flex flex-1 flex-col items-center gap-space-sm md:items-start">
                   <span className="flex size-12 items-center justify-center rounded-2xl bg-royal-gradient-compact text-accent-gold shadow-md transition-transform duration-500 group-hover:scale-105">
                     <Icon name={category.icon} size={22} />
                   </span>
@@ -99,7 +99,7 @@ export function CollectionsSection({ section }: { section?: HomeSection }) {
                       <li key={brand.id}>
                         <Link
                           to={`/collections/${category.slug}/${brand.slug}`}
-                          className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-body-sm text-on-surface-variant transition-colors hover:bg-water-foam hover:text-primary-container"
+                          className="flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-body-sm text-on-surface-variant transition-colors hover:bg-water-foam hover:text-primary-container md:justify-between"
                         >
                           <span className="truncate">{brand.name}</span>
                           <span className="shrink-0 whitespace-nowrap text-label-sm">

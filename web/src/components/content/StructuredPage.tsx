@@ -104,7 +104,7 @@ function LeadBand({
             </div>
           </Reveal>
 
-          <div className="flex flex-col gap-space-md lg:col-span-9">
+          <div className="flex flex-col items-center gap-space-md text-center lg:col-span-9 md:items-start md:text-left">
             <Reveal>
               <p className="font-display text-headline-sm leading-snug text-on-surface md:text-headline-md lg:text-headline-lg">
                 {lead}
@@ -112,7 +112,7 @@ function LeadBand({
             </Reveal>
             {supporting.map((text) => (
               <Reveal key={text} delay={0.08}>
-                <p className="max-w-3xl border-l-2 border-outline-variant/50 pl-space-md text-body-md leading-relaxed text-on-surface-variant">
+                <p className="max-w-3xl border-outline-variant/50 text-body-md leading-relaxed text-on-surface-variant md:border-l-2 md:pl-space-md">
                   {text}
                 </p>
               </Reveal>
@@ -127,7 +127,7 @@ function LeadBand({
 /** Renders a group's blocks in the neutral house style. */
 function GroupBlocks({ group }: { group: ContentGroup }) {
   return (
-    <div className="flex flex-col gap-space-md">
+    <div className="flex flex-col gap-space-md text-center md:text-left">
       {group.blocks.map((block, index) => {
         if (block.kind === 'list') {
           return (
@@ -135,7 +135,7 @@ function GroupBlocks({ group }: { group: ContentGroup }) {
               {block.items.map((item) => (
                 <li
                   key={item}
-                  className="flex items-start gap-space-sm text-body-md leading-relaxed text-on-surface-variant"
+                  className="flex items-start justify-center gap-space-sm text-body-md leading-relaxed text-on-surface-variant md:justify-start"
                 >
                   <Icon name="check" size={16} className="mt-1 shrink-0 text-secondary" />
                   {item}
@@ -215,7 +215,7 @@ function ClosingBand({
                 : 'border-outline-variant/30 bg-surface-container-lowest shadow-e1',
             )}
           >
-            <div className="flex flex-col gap-space-xs">
+            <div className="flex flex-col items-center gap-space-xs text-center md:items-start md:text-left">
               <span className={cn('eyebrow', dark ? 'text-accent-gold' : 'text-secondary')}>
                 Next step
               </span>
@@ -237,7 +237,7 @@ function ClosingBand({
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-space-sm">
+            <div className="flex flex-wrap justify-center gap-space-sm md:justify-start">
               <ButtonLink to={cta.href} variant={dark ? 'gold' : 'primary'} icon="mail">
                 {cta.label}
               </ButtonLink>
@@ -655,17 +655,19 @@ export function StructuredPage({ page, mode }: { page: Page; mode: PageLayoutMod
       : undefined
 
   // `plain` keeps the lead inside its single column; the bespoke modes use LeadBand.
+  // Centred on a phone, like every other public page; long-form body copy keeps its left
+  // edge from md, where the measure is wide enough to read comfortably.
   if (mode === 'plain') {
     return (
-      <>
+      <div className="text-center md:text-left">
         <PlainBody lead={parsed.lead} supporting={supporting} groups={bodyGroups} />
         <ClosingBand mode={mode} primaryCta={primaryCta} />
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className="text-center md:text-left">
       <LeadBand
         lead={parsed.lead}
         supporting={supporting}
@@ -677,6 +679,6 @@ export function StructuredPage({ page, mode }: { page: Page; mode: PageLayoutMod
       {mode === 'commercial' ? <CommercialBody groups={bodyGroups} /> : null}
 
       <ClosingBand mode={mode} primaryCta={primaryCta} />
-    </>
+    </div>
   )
 }

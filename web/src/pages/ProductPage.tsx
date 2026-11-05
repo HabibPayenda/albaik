@@ -240,8 +240,11 @@ export function ProductPage() {
             </div>
 
             {/* -------------------------------------------------------- details */}
-            <div className="flex flex-col gap-space-md lg:col-span-6">
-              <div className="flex flex-wrap items-center gap-2">
+            {/* Centred on a phone: the column is one narrow measure under a full-width
+                image, so left-aligned text reads as a ragged edge. From md the image sits
+                beside the copy and the block returns to a left-aligned column. */}
+            <div className="flex flex-col gap-space-md text-center lg:col-span-6 md:text-left">
+              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
                 <Link
                   to={`/collections/${product.categorySlug}/${product.brandSlug}`}
                   className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-highest px-3 py-1.5 text-label-md font-bold uppercase tracking-wider text-on-surface transition-colors hover:bg-water-foam hover:text-primary-container"
@@ -264,8 +267,18 @@ export function ProductPage() {
                 <p className="text-body-lg text-on-surface-variant">{product.subtitle}</p>
               ) : null}
 
-              <div className="flex flex-wrap items-end gap-space-md rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-space-md">
-                <div className="flex flex-col">
+              {product.ibn ? (
+                <p className="text-label-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                  IBN{' '}
+                  {/* A number is a left-to-right run even on an RTL page. */}
+                  <span className="font-mono tracking-normal text-on-surface" dir="ltr">
+                    {product.ibn}
+                  </span>
+                </p>
+              ) : null}
+
+              <div className="flex flex-wrap items-end justify-center gap-space-md rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-space-md md:justify-start">
+                <div className="flex flex-col items-center md:items-start">
                   <span className="text-label-sm font-medium uppercase tracking-wider text-on-surface-variant">
                     {hasNumericPrice ? 'Retail price' : 'Pricing'}
                   </span>
@@ -290,7 +303,7 @@ export function ProductPage() {
                   ) : null}
                 </div>
 
-                <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-marine/10 px-3 py-1.5 text-label-md font-bold text-on-tertiary-fixed-variant">
+                <span className="inline-flex items-center gap-2 rounded-full bg-marine/10 md:ml-auto px-3 py-1.5 text-label-md font-bold text-on-tertiary-fixed-variant">
                   <Icon name="check_circle" size={14} />
                   {product.stockStatus === 'OutOfStock' ? 'Out of stock' : 'Available for wholesale'}
                 </span>
@@ -303,7 +316,7 @@ export function ProductPage() {
               {product.benefits.length ? (
                 <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {product.benefits.slice(0, 4).map((benefit) => (
-                    <li key={benefit} className="flex items-start gap-2 text-body-sm text-on-surface">
+                    <li key={benefit} className="flex items-start justify-center gap-2 text-body-sm text-on-surface md:justify-start">
                       <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary/12 text-secondary">
                         <Icon name="check" size={11} strokeWidth={3} />
                       </span>
@@ -314,7 +327,7 @@ export function ProductPage() {
               ) : null}
 
               {product.ingredients.length ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap justify-center gap-1.5 md:justify-start">
                   {product.ingredients.map((tag) => (
                     <Chip key={tag} accent={product.badgeStyle === 'gold' ? 'gold' : 'teal'}>
                       {tag}
@@ -323,7 +336,7 @@ export function ProductPage() {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap items-center gap-space-sm pt-space-xs">
+              <div className="flex flex-wrap items-center justify-center gap-space-sm pt-space-xs md:justify-start">
                 <ButtonLink to={enquiryHref} variant="primary" size="lg" icon="mail">
                   Enquire about this product
                 </ButtonLink>
@@ -340,7 +353,7 @@ export function ProductPage() {
                   { icon: 'truck', title: 'Distribution', copy: 'Nationwide wholesale network' },
                   { icon: 'info', title: 'Verified copy', copy: 'Claims from approved documentation' },
                 ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-2">
+                  <div key={item.title} className="flex items-start justify-center gap-2 md:justify-start">
                     <Icon name={item.icon} size={18} className="mt-0.5 text-secondary" />
                     <div className="flex flex-col">
                       <span className="text-label-md font-bold text-on-surface">{item.title}</span>
@@ -357,7 +370,7 @@ export function ProductPage() {
       {/* ------------------------------------------------------------- tabs */}
       <Section tone="surface">
         <Container>
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-4xl text-center md:text-left">
             <div className="mb-space-lg flex flex-wrap items-center justify-center gap-1.5 rounded-full bg-surface-container-low p-1">
               {tabs.map((item) => {
                 const isActive = tab === item.key
@@ -404,7 +417,7 @@ export function ProductPage() {
                       {product.benefits.length ? (
                         <ul className="flex flex-col gap-2">
                           {product.benefits.map((benefit) => (
-                            <li key={benefit} className="flex items-start gap-2.5 text-body-md text-on-surface-variant">
+                            <li key={benefit} className="flex items-start justify-center gap-2.5 text-body-md text-on-surface-variant md:justify-start">
                               <Icon name="check_circle" size={17} className="mt-0.5 shrink-0 text-secondary" />
                               {benefit}
                             </li>
@@ -463,7 +476,7 @@ export function ProductPage() {
               eyebrow="Complement your routine"
               title="Related formulations"
               subtitle={`More from ${product.categoryName} and ${product.brandName}.`}
-              className="mb-space-lg"
+              className="mb-space-lg text-center md:text-left"
             />
             <Stagger className="grid grid-cols-1 gap-space-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {product.related.map((related) => (
@@ -474,6 +487,7 @@ export function ProductPage() {
                     priceOnRequest={settings.priceOnRequest}
                     currency={settings.currency}
                     className="h-full"
+                    centered
                   />
                 </StaggerItem>
               ))}
@@ -484,7 +498,7 @@ export function ProductPage() {
 
       <Reveal>
         <Container className="pb-space-xl">
-          <div className="flex flex-wrap items-center justify-between gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg">
+          <div className="flex flex-wrap items-center justify-center gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg md:justify-between">
             <div className="flex flex-col gap-1">
               <span className="font-display text-headline-sm font-semibold text-on-surface">
                 Looking for wholesale supply?

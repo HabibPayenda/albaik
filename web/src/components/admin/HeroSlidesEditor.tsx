@@ -7,14 +7,19 @@ import { Button } from '@/components/ui/Button'
 import { Field, Select, TextArea, TextInput } from '@/components/ui/Field'
 import { ImageField } from '@/components/admin/ImageField'
 import { Icon } from '@/components/ui/Icon'
-import { parseSlides, type FocalPoint, type HeroSlide } from '@/components/home/Hero'
-import { cn } from '@/lib/utils'
+import {
+  HERO_VARIANTS,
+  parseSlides,
+  type FocalPoint,
+  type HeroSlide,
+  type HeroVariant,
+} from '@/lib/heroSlides'
+import type { UploadKind } from '@/lib/upload'
 
 const TEMPLATE: HeroSlide = {
   backdrop: '',
+  backdrops: {},
   focalPoint: 'away-from-text',
-  badge: 'New slide',
-  badgeSubtitle: '',
   title: '',
   accentWord: '',
   body: '',
@@ -22,6 +27,61 @@ const TEMPLATE: HeroSlide = {
   primaryCtaHref: '',
   secondaryCtaLabel: '',
   secondaryCtaHref: '',
+}
+
+/**
+ * The four art-directed compositions, in the order the hero asks for them.
+ *
+ * Each label carries the breakpoint and the shape so an editor can match a file to a
+ * slot without reading the CSS, and each `kind` routes the upload to that breakpoint's
+ * ceiling — a phone never downloads a 2560px file. The hero renders them as
+ * `<source media>` entries, so the browser picks exactly one.
+ */
+const VARIANT_FIELDS: {
+  variant: HeroVariant
+  label: string
+  hint: string
+  aspect: 'ultrawide' | 'video' | 'tablet' | 'portrait'
+  kind: UploadKind
+}[] = [
+  {
+    variant: 'ultrawide',
+    label: 'Ultrawide · 1600px and up',
+    hint: '2560×1086, about 2.36:1. The widest composition.',
+    aspect: 'ultrawide',
+    kind: 'backdrop-ultrawide',
+  },
+  {
+    variant: 'desktop',
+    label: 'Desktop · 1024–1599px',
+    hint: '1920×1080, 16:9.',
+    aspect: 'video',
+    kind: 'backdrop-desktop',
+  },
+  {
+    variant: 'tablet',
+    label: 'Tablet · 768–1023px',
+    hint: '1536×1153, 4:3.',
+    aspect: 'tablet',
+    kind: 'backdrop-tablet',
+  },
+  {
+    variant: 'mobile',
+    label: 'Mobile · under 768px',
+    hint: '1080×1441, 3:4 portrait.',
+    aspect: 'portrait',
+    kind: 'backdrop-mobile',
+  },
+]
+
+/** Drops empty slots so "unset" stays unambiguous and the JSON stays small. */
+function cleanBackdrops(value?: Partial<Record<HeroVariant, string>>) {
+  return Object.fromEntries(
+    HERO_VARIANTS.flatMap((variant) => {
+      const url = value?.[variant]?.trim()
+      return url ? [[variant, url] as const] : []
+    }),
+  )
 }
 
 /**
@@ -78,16 +138,22 @@ export function HeroSlidesEditor() {
 
   const [slides, setSlides] = useState<HeroSlide[]>([])
   const [defaultBackdrop, setDefaultBackdrop] = useState('')
+  const [defaultBackdrops, setDefaultBackdrops] = useState<Partial<Record<HeroVariant, string>>>({})
   const [seeded, setSeeded] = useState(false)
 
   useEffect(() => {
     if (seeded || !hero) return
     setSlides(parseSlides(hero.slidesJson).length ? parseSlides(hero.slidesJson) : [TEMPLATE])
     try {
-      const data = JSON.parse(hero.dataJson ?? '{}') as { defaultBackdrop?: string }
+      const data = JSON.parse(hero.dataJson ?? '{}') as {
+        defaultBackdrop?: string
+        defaultBackdrops?: Partial<Record<HeroVariant, string>>
+      }
       setDefaultBackdrop(data.defaultBackdrop ?? '')
+      setDefaultBackdrops(data.defaultBackdrops ?? {})
     } catch {
       setDefaultBackdrop('')
+      setDefaultBackdrops({})
     }
     setSeeded(true)
   }, [hero, seeded])
@@ -102,6 +168,14 @@ export function HeroSlidesEditor() {
 
   const set = (index: number, patch: Partial<HeroSlide>) =>
     setSlides((current) => current.map((s, i) => (i === index ? { ...s, ...patch } : s)))
+  const setBackdrop = (index: number, variant: HeroVariant, url: string) =>
+    setSlides((current) =>
+      current.map((s, i) =>
+        i === index ? { ...s, backdrops: { ...s.backdrops, [variant]: url } } : s,
+      ),
+    )
+  const setDefaultVariant = (variant: HeroVariant, url: string) =>
+    setDefaultBackdrops((current) => ({ ...current, [variant]: url }))
   const move = (index: number, dir: -1 | 1) =>
     setSlides((current) => {
       const next = [...current]
@@ -115,9 +189,8 @@ export function HeroSlidesEditor() {
   const onSave = async () => {
     const clean = slides.map((s) => ({
       backdrop: s.backdrop ?? '',
+      backdrops: cleanBackdrops(s.backdrops),
       focalPoint: s.focalPoint ?? 'away-from-text',
-      badge: s.badge ?? '',
-      badgeSubtitle: s.badgeSubtitle ?? '',
       title: s.title ?? '',
       accentWord: s.accentWord ?? '',
       body: s.body ?? '',
@@ -141,7 +214,11 @@ export function HeroSlidesEditor() {
       primaryCtaHref: hero.primaryCtaHref ?? '',
       secondaryCtaLabel: hero.secondaryCtaLabel ?? '',
       secondaryCtaHref: hero.secondaryCtaHref ?? '',
-      dataJson: JSON.stringify({ ...existingData, defaultBackdrop }),
+      dataJson: JSON.stringify({
+        ...existingData,
+        defaultBackdrop,
+        defaultBackdrops: cleanBackdrops(defaultBackdrops),
+      }),
       slidesJson: JSON.stringify(clean),
       sortOrder: hero.sortOrder,
       isVisible: hero.isVisible,
@@ -160,7 +237,7 @@ export function HeroSlidesEditor() {
   return (
     <AdminCard
       title="Hero carousel"
-      description="Each slide shows a backdrop, a badge, a headline (title + accent word), body and two buttons. Drag-free reordering: use the up/down arrows. With one slide the hero behaves like the original single banner."
+      description="Each slide carries up to four art-directed compositions — ultrawide, desktop, tablet and mobile — and the browser loads exactly the one its screen needs. Every upload is converted to WebP under 300 KB. Plus the headline (title + accent word), body and two buttons. With one slide the hero behaves like the original single banner."
       actions={
         <>
           <Button variant="ghost" size="sm" icon="plus" onClick={() => setSlides((c) => [...c, { ...TEMPLATE }])}>
@@ -215,20 +292,19 @@ export function HeroSlidesEditor() {
               {index + 1}
             </span>
 
-            <div className={cn('grid gap-space-sm sm:col-span-2 sm:grid-cols-2')}>
-              <Field
-                label="Backdrop (optional)"
-                hint="The full-width photo behind this slide’s text. Leave empty to use the default backdrop below, or the royal gradient when there is no default."
-              >
-                <ImageField
-                  id={`slide-${index}-backdrop`}
-                  value={slide.backdrop ?? ''}
-                  onChange={(v) => set(index, { backdrop: v })}
-                  aspect="video"
-                  kind="backdrop"
-                  placeholder="Paste an image URL or upload"
-                />
-              </Field>
+            <div className="grid gap-space-sm sm:col-span-2 sm:grid-cols-2">
+              {VARIANT_FIELDS.map((field) => (
+                <Field key={field.variant} label={field.label} hint={field.hint}>
+                  <ImageField
+                    id={`slide-${index}-${field.variant}`}
+                    value={slide.backdrops?.[field.variant] ?? ''}
+                    onChange={(v) => setBackdrop(index, field.variant, v)}
+                    aspect={field.aspect}
+                    kind={field.kind}
+                    placeholder="Paste an image URL or upload"
+                  />
+                </Field>
+              ))}
               <Field
                 label="Focal point"
                 hint="Which part of the backdrop the crop keeps. Whichever way you choose, the copy stays clear of the subject."
@@ -245,24 +321,21 @@ export function HeroSlidesEditor() {
                   ))}
                 </Select>
               </Field>
+              <Field
+                label="Fallback for any size (optional)"
+                hint="A single picture used at any breakpoint with no composition of its own — including slides saved before per-size artwork existed."
+              >
+                <ImageField
+                  id={`slide-${index}-backdrop`}
+                  value={slide.backdrop ?? ''}
+                  onChange={(v) => set(index, { backdrop: v })}
+                  aspect="video"
+                  kind="backdrop"
+                  placeholder="Paste an image URL or upload"
+                />
+              </Field>
             </div>
 
-            <Field label="Badge">
-              <TextInput
-                id={`slide-${index}-badge`}
-                value={slide.badge ?? ''}
-                onChange={(e) => set(index, { badge: e.target.value })}
-                placeholder="Established Standard"
-              />
-            </Field>
-            <Field label="Badge sub-label">
-              <TextInput
-                id={`slide-${index}-badgeSub`}
-                value={slide.badgeSubtitle ?? ''}
-                onChange={(e) => set(index, { badgeSubtitle: e.target.value })}
-                placeholder="Approved product documentation"
-              />
-            </Field>
             <Field label="Headline (title)">
               <TextInput
                 id={`slide-${index}-title`}
@@ -327,19 +400,40 @@ export function HeroSlidesEditor() {
       </div>
 
       <div className="mt-space-lg border-t border-primary-container/10 pt-space-md">
-        <Field
-          label="Default backdrop"
-          hint="Used by any slide that has no backdrop of its own, so a half-built carousel still looks finished. Leave empty and those slides fall back to the royal gradient."
-        >
-          <ImageField
-            id="hero-default-backdrop"
-            value={defaultBackdrop}
-            onChange={setDefaultBackdrop}
-            aspect="video"
-            kind="backdrop"
-            placeholder="Paste an image URL or upload"
-          />
-        </Field>
+        <p className="mb-space-sm text-label-md font-semibold uppercase tracking-wider text-on-surface-variant">
+          Default artwork
+        </p>
+        <p className="mb-space-md text-label-md text-on-surface-variant">
+          Inherited by any slide with no picture of its own, so a half-built carousel still
+          looks finished. Leave it empty and those slides fall back to the royal gradient.
+        </p>
+        <div className="grid gap-space-sm sm:grid-cols-2">
+          {VARIANT_FIELDS.map((field) => (
+            <Field key={field.variant} label={field.label} hint={field.hint}>
+              <ImageField
+                id={`hero-default-${field.variant}`}
+                value={defaultBackdrops[field.variant] ?? ''}
+                onChange={(v) => setDefaultVariant(field.variant, v)}
+                aspect={field.aspect}
+                kind={field.kind}
+                placeholder="Paste an image URL or upload"
+              />
+            </Field>
+          ))}
+          <Field
+            label="Fallback for any size (optional)"
+            hint="Used at any breakpoint with no composition of its own."
+          >
+            <ImageField
+              id="hero-default-backdrop"
+              value={defaultBackdrop}
+              onChange={setDefaultBackdrop}
+              aspect="video"
+              kind="backdrop"
+              placeholder="Paste an image URL or upload"
+            />
+          </Field>
+        </div>
       </div>
     </AdminCard>
   )

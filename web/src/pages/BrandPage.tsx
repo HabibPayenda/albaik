@@ -148,8 +148,8 @@ export function BrandPage() {
       <Section tone="low" className="py-space-lg">
         <Container>
           <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-3xl border border-outline-variant/40 bg-outline-variant/40 sm:grid-cols-3">
-            <div className="flex flex-col gap-space-xs bg-surface-container-lowest p-space-lg">
-              <dt className="inline-flex items-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">
+            <div className="flex flex-col items-center gap-space-xs bg-surface-container-lowest p-space-lg text-center md:items-start md:text-left">
+              <dt className="inline-flex items-center justify-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant md:justify-start">
                 <Icon name="category" size={14} className="text-secondary" />
                 {t('brand.collection')}
               </dt>
@@ -161,8 +161,8 @@ export function BrandPage() {
               </dd>
             </div>
 
-            <div className="flex flex-col gap-space-xs bg-surface-container-lowest p-space-lg">
-              <dt className="inline-flex items-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">
+            <div className="flex flex-col items-center gap-space-xs bg-surface-container-lowest p-space-lg text-center md:items-start md:text-left">
+              <dt className="inline-flex items-center justify-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant md:justify-start">
                 <Icon name="product" size={14} className="text-secondary" />
                 {t('brand.products')}
               </dt>
@@ -174,8 +174,8 @@ export function BrandPage() {
               </dd>
             </div>
 
-            <div className="flex flex-col gap-space-xs bg-surface-container-lowest p-space-lg">
-              <dt className="inline-flex items-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant">
+            <div className="flex flex-col items-center gap-space-xs bg-surface-container-lowest p-space-lg text-center md:items-start md:text-left">
+              <dt className="inline-flex items-center justify-center gap-2 text-label-sm font-bold uppercase tracking-wider text-on-surface-variant md:justify-start">
                 <Icon name="layers" size={14} className="text-secondary" />
                 {t('brand.availability')}
               </dt>
@@ -184,7 +184,7 @@ export function BrandPage() {
                   <dd className="font-display text-headline-sm font-semibold text-on-surface">
                     {elsewhere.length + 1} collections
                   </dd>
-                  <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <dd className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 md:justify-start">
                     {/* Without this the tile claims four collections and lists three. */}
                     <span className="text-body-sm text-on-surface-variant">{t('brand.alsoIn')}</span>
                     {elsewhere.map((entry) => (

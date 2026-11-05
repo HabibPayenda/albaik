@@ -26,6 +26,8 @@ export interface ProductCard {
   categoryId: number
   categorySlug?: string
   categoryName?: string
+  /** Product number in the International Barcode Network: digits only, unique, optional. */
+  ibn?: string | null
 }
 
 export interface ProductImage {
@@ -33,6 +35,17 @@ export interface ProductImage {
   url: string
   alt?: string
   sortOrder: number
+}
+
+/** What a scanned product QR code resolves to. */
+export interface VerifyProduct {
+  slug: string
+  name: string
+  brandName?: string | null
+  imageUrl?: string | null
+  subtitle?: string | null
+  formulationLabel?: string | null
+  ibn?: string | null
 }
 
 export interface ProductDetail extends Omit<ProductCard, 'benefits'> {
@@ -298,6 +311,8 @@ export interface ProductInput {
   howToUse?: string
   safetyNote?: string
   suitableFor?: string
+  /** Product number in the International Barcode Network: digits only, unique, optional. */
+  ibn?: string
   isFeatured: boolean
   isActive: boolean
   sortOrder: number

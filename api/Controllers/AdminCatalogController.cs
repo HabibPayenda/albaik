@@ -5,6 +5,7 @@ using Albaik.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace Albaik.Api.Controllers;
 
@@ -161,7 +162,11 @@ public class AdminCatalogController : ControllerBase
         var validation = await Validate(input);
         if (validation is not null) return BadRequest(new { message = validation });
 
-        var p = new Product { Slug = await UniqueProductSlug(string.IsNullOrWhiteSpace(input.Slug) ? Slug.From(input.Name) : Slug.From(input.Slug)) };
+        var p = new Product
+        {
+            Slug = await UniqueProductSlug(string.IsNullOrWhiteSpace(input.Slug) ? Slug.From(input.Name) : Slug.From(input.Slug)),
+            VerificationCode = await NewUniqueVerificationCodeAsync(),
+        };
         Apply(p, input);
         _db.Products.Add(p);
         await _db.SaveChangesAsync();
@@ -173,7 +178,7 @@ public class AdminCatalogController : ControllerBase
     [HttpPut("products/{id:int}")]
     public async Task<ActionResult<ProductCardDto>> UpdateProduct(int id, [FromBody] ProductInput input)
     {
-        var validation = await Validate(input);
+        var validation = await Validate(input, id);
         if (validation is not null) return BadRequest(new { message = validation });
 
         var p = await _db.Products.Include(x => x.Images).Include(x => x.Brand).Include(x => x.Category)
@@ -207,6 +212,125 @@ public class AdminCatalogController : ControllerBase
         _db.Products.Remove(p);
         await _db.SaveChangesAsync();
         return Ok(new { message = $"Product '{p.Name}' deleted." });
+    }
+
+    // ------------------------------------------------------------------ verification
+
+    /// <summary>
+    /// The product's IBN, its verification code and the absolute URL the QR code encodes.
+    ///
+    /// The URL is absolute on purpose: a printed QR has to resolve from a phone that knows
+    /// nothing about this deployment, so the origin comes from the `site.publicBaseUrl`
+    /// setting, falling back to the host the request arrived on. Generating a QR from a
+    /// laptop without that setting would encode localhost and be useless once printed.
+    /// </summary>
+    [HttpGet("products/{id:int}/verification")]
+    public async Task<ActionResult<object>> ProductVerification(int id)
+    {
+        var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound(new { message = "Product not found." });
+
+        var code = await EnsureVerificationCodeAsync(p.Id);
+        return Ok(new
+        {
+            ibn = p.Ibn,
+            verificationCode = code,
+            verificationCodeDisplay = VerificationCodes.ForDisplay(code),
+            verifyUrl = $"{await PublicBaseUrlAsync()}/verify/{code}",
+        });
+    }
+
+    /// <summary>The QR code as vector art — what a printer wants.</summary>
+    [HttpGet("products/{id:int}/qr.svg")]
+    public async Task<IActionResult> ProductQrSvg(int id)
+    {
+        var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound(new { message = "Product not found." });
+
+        var svg = QrCodeRenderer.Svg(await VerifyUrlAsync(p.Id));
+        return File(Encoding.UTF8.GetBytes(svg), "image/svg+xml", $"{p.Slug}-qr.svg");
+    }
+
+    /// <summary>The QR code as a bitmap, for a quick proof or a screen.</summary>
+    [HttpGet("products/{id:int}/qr.png")]
+    public async Task<IActionResult> ProductQrPng(int id)
+    {
+        var p = await _db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound(new { message = "Product not found." });
+
+        return File(QrCodeRenderer.Png(await VerifyUrlAsync(p.Id)), "image/png", $"{p.Slug}-qr.png");
+    }
+
+    /// <summary>
+    /// Replaces the product's verification code. Every QR already printed with the old
+    /// code stops verifying, so the request must carry the signed-in admin's password —
+    /// a mis-click here is a reprint, not an undo.
+    /// </summary>
+    [HttpPost("products/{id:int}/verification-code")]
+    public async Task<ActionResult<object>> RegenerateVerificationCode(int id, [FromBody] RegenerateVerificationCodeInput input)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == id);
+        if (p is null) return NotFound(new { message = "Product not found." });
+
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var admin = int.TryParse(userId, out var parsed) ? await _db.AdminUsers.FindAsync(parsed) : null;
+        if (admin is null || !BCrypt.Net.BCrypt.Verify(input.Password ?? string.Empty, admin.PasswordHash))
+            return BadRequest(new { message = "Your password is incorrect." });
+
+        p.VerificationCode = await NewUniqueVerificationCodeAsync();
+        p.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            verificationCode = p.VerificationCode,
+            verificationCodeDisplay = VerificationCodes.ForDisplay(p.VerificationCode),
+            verifyUrl = $"{await PublicBaseUrlAsync()}/verify/{p.VerificationCode}",
+        });
+    }
+
+    private async Task<string> VerifyUrlAsync(int productId) =>
+        $"{await PublicBaseUrlAsync()}/verify/{await EnsureVerificationCodeAsync(productId)}";
+
+    /// <summary>
+    /// A product created before verification codes existed has an empty one. Mint it on
+    /// first use rather than requiring a migration step, and save so the QR a staff member
+    /// just printed is the one that will verify tomorrow.
+    /// </summary>
+    private async Task<string> EnsureVerificationCodeAsync(int productId)
+    {
+        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId)
+                ?? throw new InvalidOperationException($"Product {productId} not found.");
+
+        var existing = p.VerificationCode;
+        if (existing is not null && VerificationCodes.IsWellFormed(existing)) return existing;
+
+        p.VerificationCode = await NewUniqueVerificationCodeAsync();
+        await _db.SaveChangesAsync();
+        return p.VerificationCode;
+    }
+
+    private async Task<string> NewUniqueVerificationCodeAsync()
+    {
+        // 80 bits of entropy makes a collision implausible, but the unique index is the
+        // actual guarantee; retry rather than let a 1-in-10^24 throw reach the user.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var candidate = VerificationCodes.New();
+            if (!await _db.Products.AnyAsync(x => x.VerificationCode == candidate)) return candidate;
+        }
+        throw new InvalidOperationException("Could not mint a unique verification code.");
+    }
+
+    private async Task<string> PublicBaseUrlAsync()
+    {
+        var configured = await _db.SiteSettings
+            .Where(s => s.Key == "site.publicBaseUrl")
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync();
+
+        if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim().TrimEnd('/');
+        return $"{Request.Scheme}://{Request.Host}";
     }
 
     // ------------------------------------------------------------------ image upload
@@ -256,6 +380,40 @@ public class AdminCatalogController : ControllerBase
     [RequestSizeLimit(24 * 1024 * 1024)]
     public Task<ActionResult<object>> UploadBackdrop(IFormFile file, CancellationToken ct)
         => Store(file, ImagePipeline.Limits.Backdrop, "uploads/backdrops", ct);
+
+    /// <summary>
+    /// Stores an art-directed hero backdrop for one breakpoint.
+    ///
+    /// The hero banner is supplied as four compositions rather than one picture cropped
+    /// four ways, so each breakpoint is uploaded to its own path and gets its own
+    /// dimension ceiling. The variant is a path segment rather than a query string for
+    /// the same reason the route is separate at all: the guarantee must not depend on a
+    /// caller-supplied argument the caller can get wrong. See
+    /// docs/adr/0002-backdrop-upload-route.md and docs/adr/0007-hero-backdrop-per-breakpoint.md.
+    /// </summary>
+    [HttpPost("upload/backdrop/{variant}")]
+    [RequestSizeLimit(24 * 1024 * 1024)]
+    public async Task<ActionResult<object>> UploadBackdropVariant(string variant, IFormFile file, CancellationToken ct)
+    {
+        var limits = variant.ToLowerInvariant() switch
+        {
+            "ultrawide" => ImagePipeline.Limits.BackdropUltrawide,
+            "desktop" => ImagePipeline.Limits.BackdropDesktop,
+            "tablet" => ImagePipeline.Limits.BackdropTablet,
+            "mobile" => ImagePipeline.Limits.BackdropMobile,
+            _ => (ImagePipeline.Limits?)null,
+        };
+
+        if (limits is null)
+        {
+            return BadRequest(new
+            {
+                message = $"Unknown backdrop variant '{variant}'. Choose ultrawide, desktop, tablet or mobile."
+            });
+        }
+
+        return await Store(file, limits.Value, "uploads/backdrops", ct);
+    }
 
     private async Task<ActionResult<object>> Store(
         IFormFile file,
@@ -372,6 +530,7 @@ public class AdminCatalogController : ControllerBase
         p.Rating = i.Rating; p.ReviewCount = i.ReviewCount;
         p.Badge = i.Badge; p.BadgeStyle = i.BadgeStyle;
         p.StockStatus = i.StockStatus; p.ImageUrl = i.ImageUrl;
+        p.Ibn = string.IsNullOrWhiteSpace(i.Ibn) ? null : i.Ibn.Trim();
         p.AccentFrom = i.AccentFrom; p.AccentTo = i.AccentTo;
         p.Benefits = i.Benefits.Where(b => !string.IsNullOrWhiteSpace(b)).Select(b => b.Trim()).ToList();
         p.Ingredients = i.Ingredients.Where(b => !string.IsNullOrWhiteSpace(b)).Select(b => b.Trim()).ToList();
@@ -379,13 +538,25 @@ public class AdminCatalogController : ControllerBase
         p.IsFeatured = i.IsFeatured; p.IsActive = i.IsActive; p.SortOrder = i.SortOrder;
     }
 
-    private async Task<string?> Validate(ProductInput i)
+    private async Task<string?> Validate(ProductInput i, int? productId = null)
     {
         if (string.IsNullOrWhiteSpace(i.Name)) return "Name is required.";
         if (!await _db.Categories.AnyAsync(c => c.Id == i.CategoryId)) return "Select a valid category.";
         var brand = await _db.Brands.FirstOrDefaultAsync(b => b.Id == i.BrandId);
         if (brand is null) return "Select a valid brand.";
         if (brand.CategoryId != i.CategoryId) return "The selected brand does not belong to the selected category.";
+
+        // The IBN is a plain number with no format of its own, but two products sharing
+        // one makes it useless for telling them apart — which is the whole reason it is
+        // printed on the page.
+        var ibn = i.Ibn?.Trim();
+        if (!string.IsNullOrEmpty(ibn))
+        {
+            if (!ibn.All(char.IsAsciiDigit)) return "The IBN must contain digits only.";
+            if (await _db.Products.AnyAsync(p => p.Ibn == ibn && (productId == null || p.Id != productId)))
+                return "Another product already uses that IBN.";
+        }
+
         return null;
     }
 

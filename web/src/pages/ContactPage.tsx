@@ -142,7 +142,7 @@ export function ContactPage() {
           <div className="grid grid-cols-1 gap-gutter lg:grid-cols-12">
             {/* --------------------------------------------------------- form */}
             <Reveal className="lg:col-span-7" direction="left">
-              <div className="rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1">
+              <div className="rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg text-center shadow-e1 md:text-left">
                 <h2 className="font-display text-headline-md font-semibold text-on-surface">
                   {isWholesale ? 'Tell us about your business' : 'Send us a message'}
                 </h2>
@@ -327,14 +327,14 @@ export function ContactPage() {
             {/* ------------------------------------------------------ details */}
             <div className="flex flex-col gap-space-md lg:col-span-5">
               <Reveal direction="right">
-                <div className="flex flex-col gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1">
+                <div className="flex flex-col items-center gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg text-center shadow-e1 md:items-stretch md:text-left">
                   <h2 className="font-display text-headline-sm font-semibold text-on-surface">
                     Contact details
                   </h2>
 
                   <ul className="flex flex-col gap-space-sm">
                     {channels.map((channel) => (
-                      <li key={channel.label} className="flex items-start gap-space-sm">
+                      <li key={channel.label} className="flex items-start justify-center gap-space-sm md:justify-start">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-container-low text-secondary">
                           <Icon name={channel.icon} size={17} />
                         </span>
@@ -410,7 +410,7 @@ export function ContactPage() {
               </Reveal>
 
               <Reveal direction="right" delay={0.08}>
-                <div className="rounded-3xl border border-white/10 bg-royal-gradient p-space-lg text-white shadow-e2">
+                <div className="rounded-3xl border border-white/10 bg-royal-gradient p-space-lg text-center text-white shadow-e2 md:text-left">
                   <span className="eyebrow text-accent-gold">Distributors & retailers</span>
                   <h3 className="mt-2 font-display text-headline-sm font-semibold">
                     Partner with Albaik Group
@@ -422,7 +422,7 @@ export function ContactPage() {
                       'Marketing and product-support materials',
                       'Commercial terms according to approved company policy',
                     ].map((item) => (
-                      <li key={item} className="flex items-start gap-2">
+                      <li key={item} className="flex items-start justify-center gap-2 md:justify-start">
                         <Icon name="check_circle" size={15} className="mt-0.5 shrink-0 text-accent-gold" />
                         {item}
                       </li>
@@ -454,7 +454,7 @@ export function ContactPage() {
             {mapSrc ? (
               <Reveal className="lg:col-span-12" direction="up" delay={0.08}>
                 <div className="relative overflow-hidden rounded-[2rem] border border-outline-variant/30 bg-surface-container-lowest shadow-e2">
-                  <div className="flex flex-wrap items-center justify-between gap-space-sm border-b border-outline-variant/30 bg-surface-container-low px-space-lg py-space-md">
+                  <div className="flex flex-wrap items-center justify-center gap-space-sm border-b border-outline-variant/30 bg-surface-container-low px-space-lg py-space-md text-center md:justify-between md:text-left">
                     <div className="flex min-w-0 items-center gap-space-sm">
                       <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-royal-gradient-compact text-accent-gold">
                         <Icon name="location_on" size={18} />

@@ -4,6 +4,7 @@ import { SiteLayout } from '@/components/layout/SiteLayout'
 import { PageLoader } from '@/components/ui/Feedback'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { ErrorPage } from '@/pages/ErrorPage'
 import { BrandRedirect } from '@/pages/BrandRedirect'
 
 /*
@@ -33,6 +34,7 @@ const ContentPage = lazy(() =>
 const ContactPage = lazy(() =>
   import('@/pages/ContactPage').then((m) => ({ default: m.ContactPage })),
 )
+const VerifyPage = lazy(() => import('@/pages/VerifyPage').then((m) => ({ default: m.VerifyPage })))
 
 /* The dashboard is only ever loaded by administrators, so it is code-split away
    from the public marketing bundle. */
@@ -58,7 +60,9 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <SiteLayout />,
-    errorElement: <NotFoundPage />,
+    // A thrown route error is not a 404: `ErrorPage` distinguishes a crash, a missing
+    // page and an offline device before it says anything.
+    errorElement: <ErrorPage />,
     children: [
       { index: true, element: <HomePage /> },
 
@@ -71,6 +75,9 @@ const router = createBrowserRouter([
       { path: 'brands/:brandSlug', element: <BrandRedirect /> },
 
       { path: 'contact', element: withSuspense(<ContactPage />) },
+
+      // What a printed product QR code opens. Public, and deliberately short-lived.
+      { path: 'verify/:code', element: withSuspense(<VerifyPage />) },
 
       // Named static pages, all served by the CMS-backed ContentPage.
       { path: 'about', element: withSuspense(<ContentPage slugOverride="about" />) },
@@ -92,6 +99,9 @@ const router = createBrowserRouter([
   {
     path: '/admin',
     element: withSuspense(<AdminLayout />, 'Loading dashboard'),
+    // The dashboard's own failure surface, so a broken screen does not throw a visitor-
+    // facing 404 over the staff UI.
+    errorElement: <ErrorPage variant="admin" />,
     children: [
       { index: true, element: withSuspense(<DashboardPage />, 'Loading dashboard') },
       { path: 'categories', element: withSuspense(<AdminCategories />, 'Loading dashboard') },

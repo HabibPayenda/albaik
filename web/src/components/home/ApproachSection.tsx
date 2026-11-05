@@ -143,7 +143,7 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
               {/* ------------------------------------------------ detail panel */}
               <div className="lg:col-span-5">
                 <div className="flex flex-col gap-space-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-md shadow-e1">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-center gap-2 md:justify-between">
                     <span className="text-label-sm font-bold uppercase tracking-widest text-secondary">
                       Guided selection
                     </span>
@@ -185,9 +185,9 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -14 }}
                         transition={{ duration: 0.35, ease: EASE }}
-                        className="relative z-10 flex flex-1 flex-col gap-space-md"
+                        className="relative z-10 flex flex-1 flex-col items-center gap-space-md text-center md:items-start md:text-left"
                       >
-                        <div className="flex items-start justify-between gap-space-sm">
+                        <div className="flex w-full items-start justify-center gap-space-sm md:justify-between">
                           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-accent-gold backdrop-blur-md">
                             <Icon name={selected?.icon} size={24} />
                           </span>
@@ -283,7 +283,7 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
                           onClick={() => setSelectedKey(profile.key)}
                           aria-pressed={isActive}
                           className={cn(
-                            'group flex h-full w-full items-center gap-space-sm rounded-2xl border p-space-md text-left transition-all duration-300',
+                            'group flex h-full w-full items-center justify-center gap-space-sm rounded-2xl border p-space-md text-center transition-all duration-300 md:justify-start md:text-left',
                             isActive
                               ? 'border-secondary/40 bg-surface-container-lowest shadow-e2 ring-2 ring-secondary/25'
                               : 'border-outline-variant/30 bg-surface-container-lowest shadow-sm hover:-translate-y-0.5 hover:border-secondary/30 hover:shadow-md',
@@ -299,7 +299,7 @@ export function ApproachSection({ section }: { section?: HomeSection }) {
                           >
                             <Icon name={profile.icon} size={20} />
                           </span>
-                          <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                          <span className="flex min-w-0 flex-1 flex-col items-center gap-1.5 md:items-start">
                             <span className="font-display text-body-lg font-semibold leading-snug text-on-surface">
                               {profile.title}
                             </span>

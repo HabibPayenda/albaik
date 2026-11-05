@@ -51,7 +51,9 @@ export default function ProductsPage() {
       return (
         product.name.toLowerCase().includes(term) ||
         (product.brandName ?? '').toLowerCase().includes(term) ||
-        (product.categoryName ?? '').toLowerCase().includes(term)
+        (product.categoryName ?? '').toLowerCase().includes(term) ||
+        // Staff search by the number a customer reads off a bottle.
+        (product.ibn ?? '').includes(term)
       )
     })
   }, [products, search, categoryId, brandId])
@@ -103,6 +105,20 @@ export default function ProductsPage() {
       render: (row) => <Chip accent="secondary">{row.categoryName ?? '—'}</Chip>,
     },
     { key: 'brandName', label: 'Brand', render: (row) => row.brandName ?? '—' },
+    {
+      // A missing IBN is flagged rather than blank: it is the number printed on the
+      // product, so a gap is something to chase, not an empty cell.
+      key: 'ibn',
+      label: 'IBN',
+      render: (row) =>
+        row.ibn ? (
+          <span className="font-mono text-body-sm text-on-surface" dir="ltr">
+            {row.ibn}
+          </span>
+        ) : (
+          <Chip accent="gold">No IBN</Chip>
+        ),
+    },
     {
       key: 'price',
       label: 'Price',

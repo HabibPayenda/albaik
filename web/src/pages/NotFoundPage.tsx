@@ -1,80 +1,75 @@
-import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import { useAppDispatch } from '@/store/hooks'
+import { toggleSearch } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { Container } from '@/components/ui/Layout'
 import { ButtonLink } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
-import { EASE } from '@/lib/motion'
+import { StatusPage } from '@/components/ui/StatusPage'
 import { useI18n } from '@/i18n'
+
+/**
+ * The places a visitor who mistyped a URL is most likely to want. A 404 that only offers
+ * "go home" makes them start again from the top; these are the three or four doors the
+ * site actually has.
+ */
+const QUICK_LINKS = [
+  { to: '/collections', key: 'nav.collections' },
+  { to: '/about', key: 'nav.about' },
+  { to: '/quality', key: 'nav.quality' },
+  { to: '/contact', key: 'nav.contact' },
+]
 
 export function NotFoundPage() {
   const settings = useSiteSettings()
   const { t } = useI18n()
+  const dispatch = useAppDispatch()
   useDocumentTitle(`${t('notFound.title')} — ${settings.siteName}`)
 
   return (
-    <section className="relative w-full overflow-hidden bg-royal-gradient py-space-xl text-white">
-      <div className="pointer-events-none absolute -top-32 -left-32 size-[34rem] rounded-full bg-secondary/25 blur-[100px]" />
-      <div className="pointer-events-none absolute -right-20 bottom-0 size-[30rem] rounded-full bg-accent-gold/10 blur-[90px]" />
-
-      <Container className="relative z-10 flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <motion.span
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: EASE }}
-          className="font-display text-[6rem] leading-none font-bold text-white/15 md:text-[9rem]"
-        >
-          404
-        </motion.span>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
-          className="mt-2 font-display text-headline-lg-mobile font-semibold md:text-headline-lg"
-        >
-          {t('notFound.title')}
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: EASE, delay: 0.18 }}
-          className="mt-3 max-w-lg text-body-md text-white/80"
-        >
-          {t('notFound.body')}
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: EASE, delay: 0.26 }}
-          className="mt-6 flex flex-wrap justify-center gap-space-sm"
-        >
+    <StatusPage
+      mark="404"
+      title={t('notFound.title')}
+      body={t('notFound.body')}
+      actions={
+        <>
           <ButtonLink to="/" variant="gold" size="lg" icon="home">
             {t('notFound.back')}
           </ButtonLink>
           <ButtonLink to="/collections" variant="glass" size="lg" iconRight="arrow_forward">
             {t('notFound.browseCollections')}
           </ButtonLink>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-space-md text-label-md text-white/60"
+        </>
+      }
+    >
+      <div className="flex flex-col gap-space-md">
+        <button
+          type="button"
+          onClick={() => dispatch(toggleSearch(true))}
+          className="group flex w-full items-center gap-3 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-left text-body-sm text-white/75 transition-colors hover:border-white/35 hover:bg-white/15 hover:text-white"
         >
-          <span className="flex items-center gap-2">
-            <Icon name="phone" size={15} className="text-accent-gold" />
-            {settings.phone || 'Contact the head office'}
-          </span>
-          <span className="flex items-center gap-2">
-            <Icon name="mail" size={15} className="text-accent-gold" />
-            {settings.email || 'info@albaik-group.com'}
-          </span>
-        </motion.div>
-      </Container>
-    </section>
+          <Icon name="search" size={18} className="shrink-0 text-accent-gold" />
+          <span className="flex-1">{t('notFound.searchHint')}</span>
+          <Icon name="arrow_forward" size={16} className="shrink-0 opacity-60 transition-transform group-hover:translate-x-0.5" />
+        </button>
+
+        <div>
+          <p className="text-label-sm font-bold uppercase tracking-[0.2em] text-white/45">
+            {t('notFound.quickLinks')}
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {QUICK_LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-label-md text-white/85 transition-colors hover:border-accent-gold/60 hover:bg-white/15 hover:text-white"
+              >
+                {t(link.key)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </StatusPage>
   )
 }

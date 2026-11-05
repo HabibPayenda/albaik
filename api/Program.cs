@@ -131,8 +131,16 @@ app.MapFallback(async context =>
 
 // ------------------------------------------------------------------ database + seed
 
-using (var scope = app.Services.CreateScope())
+/*
+ * Shared IIS hosting reports a startup exception as a bare HTTP 500.30 and nothing
+ * else: stdout logging is off by default and the event log is not reachable from the
+ * panel. So the failure is also written next to the app, where the file manager can
+ * fetch it. The exception is rethrown afterwards, so the host's own reporting is
+ * unchanged.
+ */
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
@@ -150,6 +158,25 @@ using (var scope = app.Services.CreateScope())
     var adminPassword = builder.Configuration["Seed:AdminPassword"] ?? "Albaik@2026";
     await DbSeeder.SeedAsync(db, logger, adminUser, adminPassword);
     logger.LogInformation("Startup complete: admin user '{AdminUser}'", adminUser);
+}
+catch (Exception startupError)
+{
+    try
+    {
+        var logPath = Path.Combine(app.Environment.ContentRootPath, "startup-error.log");
+        await File.WriteAllTextAsync(
+            logPath,
+            $"{DateTime.UtcNow:O}{Environment.NewLine}" +
+            $"Environment: {app.Environment.EnvironmentName}{Environment.NewLine}" +
+            $"ContentRoot: {app.Environment.ContentRootPath}{Environment.NewLine}{Environment.NewLine}" +
+            startupError.ToString());
+    }
+    catch
+    {
+        // Writing the report must never mask the failure it is reporting.
+    }
+
+    throw;
 }
 
 app.Run();

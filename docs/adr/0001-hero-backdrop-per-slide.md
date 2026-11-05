@@ -49,3 +49,12 @@ with a worst per-band luminance difference of 0.12/255. As a real `<img>` the
 offline claim is now checked more directly than a background allowed:
 `verify-hero-offline.mjs` asserts the element's intrinsic size is still 2560×1086
 with the network cut, which a `background-image` could not report.
+
+## Later change: the badge was removed
+
+The slide badge, and the site-name eyebrow above the headline, were later removed
+outright rather than kept. Both restated the brand on a hero that already opens with
+its own heading, and the column reads better starting on the headline. The
+featured-product strip stayed. The slide fields `badge`/`badgeSubtitle` and the
+section extras `badgeTitle`/`badgeSubtitle` are gone from the model, the editor
+and the seeder.

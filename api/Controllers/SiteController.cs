@@ -112,4 +112,35 @@ public class SiteController : ControllerBase
         if (page is null) return NotFound(new { message = $"Page '{slug}' was not found." });
         return page.ToDto();
     }
+
+    /// <summary>
+    /// What a scanned QR code resolves to: the product, if it is still published.
+    ///
+    /// Deliberately not the full product — the verification page needs a name, a brand and
+    /// a picture, and nothing that could be scraped from it. Only published products
+    /// verify: a code printed on a product that has since been withdrawn must not keep
+    /// claiming that product is genuine. See docs/adr/0008-verification-code-is-stored-not-derived.md.
+    /// </summary>
+    [HttpGet("verify/{code}")]
+    public async Task<ActionResult<VerifyProductDto>> Verify(string code)
+    {
+        // Scanners hand back the whole URL and people type the token with hyphens, so the
+        // lookup key is the normalised token rather than the raw segment.
+        var key = VerificationCodes.Normalize(code);
+        if (key.Length != 16)
+            return NotFound(new { message = "We could not verify this code." });
+
+        var product = await _db.Products
+            .Include(p => p.Brand)
+            .Where(p => p.VerificationCode == key && p.IsActive)
+            .Select(p => new VerifyProductDto(
+                p.Slug, p.Name, p.Brand != null ? p.Brand.Name : null, p.ImageUrl,
+                p.Subtitle, p.FormulationLabel, p.Ibn))
+            .FirstOrDefaultAsync();
+
+        if (product is null)
+            return NotFound(new { message = "We could not verify this code." });
+
+        return product;
+    }
 }

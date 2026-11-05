@@ -107,14 +107,18 @@ export function SectionHeading({
       {...animProps}
       className={cn(
         'flex flex-col gap-space-xs',
-        align === 'center' && 'items-center text-center mx-auto max-w-2xl',
+        // A phone has one narrow column, so headings read better centred there; from md the
+        // layout becomes two-column and they return to the side they were designed for.
+        align === 'center'
+          ? 'mx-auto max-w-2xl items-center text-center'
+          : 'items-center text-center md:items-start md:text-left',
         className,
       )}
     >
       {eyebrow ? (
         <motion.div {...item} className={cn('inline-flex items-center gap-2', eyebrowClassName)}>
           {align === 'left' && (
-            <span className="h-[2px] w-8 bg-gradient-to-r from-[#050d24] to-[#1a4fcf]" />
+            <span className="hidden h-[2px] w-8 bg-gradient-to-r from-[#050d24] to-[#1a4fcf] md:block" />
           )}
           <span className="eyebrow text-secondary">{eyebrow}</span>
         </motion.div>
@@ -230,7 +234,7 @@ export function PageHero({
           initial="hidden"
           animate="show"
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.09 } } }}
-          className="flex flex-col gap-space-sm max-w-3xl"
+          className="flex max-w-3xl flex-col items-center gap-space-sm text-center md:items-start md:text-left"
         >
           {eyebrow ? (
             <motion.span

@@ -41,12 +41,6 @@ export const slideInRight: Variants = {
 /** Shared viewport config so reveals fire once, slightly before the element is centred. */
 export const viewportOnce = { once: true, margin: '-80px 0px -80px 0px' } as const
 
-/** Page-level transition used by the router outlet. */
-export const pageTransition: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
-  exit: { opacity: 0, y: -8, transition: { duration: 0.25, ease: EASE_SOFT } },
-}
 
 /** Hero copy enters with a slightly longer, more theatrical curve. */
 export const heroChild: Variants = {

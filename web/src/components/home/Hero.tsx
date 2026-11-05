@@ -10,36 +10,17 @@ import { ButtonLink } from '@/components/ui/Button'
 import { GlassTag } from '@/components/ui/Badge'
 import { BrandMark } from '@/components/ui/BrandMark'
 import type { HomeSection } from '@/lib/types'
-
-/**
- * Which way the crop is biased, named for where the subject sits *relative to the
- * text* rather than for a physical edge. `away-from-text` keeps the subject on the
- * side the copy does not cover, which is what a hero backdrop almost always wants.
- */
-export type FocalPoint = 'away-from-text' | 'centre' | 'toward-text'
-
-export interface HeroSlide {
-  /** Full-bleed backdrop behind this slide's text. Empty falls back, then to the gradient. */
-  backdrop?: string
-  focalPoint?: FocalPoint
-  badge?: string
-  badgeSubtitle?: string
-  title?: string
-  accentWord?: string
-  body?: string
-  primaryCtaLabel?: string
-  primaryCtaHref?: string
-  secondaryCtaLabel?: string
-  secondaryCtaHref?: string
-}
-
-export interface HeroSectionData {
-  accentWord?: string
-  /** Backdrop inherited by any slide that has none of its own. */
-  defaultBackdrop?: string
-  badgeTitle?: string
-  badgeSubtitle?: string
-}
+import {
+  HERO_VARIANTS,
+  HERO_VARIANT_MEDIA,
+  parseData,
+  parseSlides,
+  resolveBackdrop,
+  type FocalPoint,
+  type HeroSlide,
+  type HeroSectionData,
+  type HeroVariant,
+} from '@/lib/heroSlides'
 
 /**
  * `object-position` for the picture, mirrored for RTL.
@@ -58,12 +39,10 @@ export interface HeroSectionData {
  * docs/adr/0003-hero-composition-mirrors-with-text.md.
  */
 const FOCAL_POSITION: Record<FocalPoint, string> = {
-  'away-from-text': 'object-right rtl:object-left',
-  centre: 'object-center',
-  'toward-text': 'object-left rtl:object-right',
+  'away-from-text': 'object-top md:object-right md:rtl:object-left',
+  centre: 'object-top md:object-center',
+  'toward-text': 'object-top md:object-left md:rtl:object-right',
 }
-
-const FOCAL_POINTS: FocalPoint[] = ['away-from-text', 'centre', 'toward-text']
 
 const ACCENT_TEXT: Record<string, string> = {
   gold: 'text-accent-gold-light',
@@ -77,8 +56,6 @@ function fallbackSlide(section: HomeSection | undefined, data: HeroSectionData, 
   return {
     backdrop: data.defaultBackdrop || '',
     focalPoint: 'away-from-text',
-    badge: data.badgeTitle ?? 'Established Standard',
-    badgeSubtitle: data.badgeSubtitle ?? 'Approved product documentation',
     title: section?.title ?? 'The Mark of',
     accentWord: data.accentWord ?? 'Pure Perfection.',
     body: section?.body ?? settings.description,
@@ -94,16 +71,17 @@ function fallbackSlide(section: HomeSection | undefined, data: HeroSectionData, 
  * type, with all of the copy in a single column.
  *
  * The hero is a carousel. `SlidesJson` on the hero section holds an array of slides
- * (backdrop, focal point, badge, headline = title + accent word, body, both CTAs); an
+ * (backdrop set, focal point, headline = title + accent word, body, both CTAs); an
  * editor builds and reorders them from the dashboard, so the copy above the fold is
  * fully changeable. With one slide (or none set) it degrades to the original single
  * hero. A slide's backdrop falls back to the section's default, then to the royal
  * gradient, so a half-built carousel still looks finished.
  *
  * There is exactly one image in the hero and it is behind the text. The glassmorphic
- * product plinth that used to sit to the right is gone; the slide badge and the
- * featured-product strip it held moved into the copy column rather than being deleted,
- * so a field an editor fills is never a field the page silently ignores.
+ * product plinth that used to sit to the right is gone, and the featured-product strip
+ * it held moved into the copy column. The slide badge and the site-name eyebrow that
+ * used to open the column were removed outright: they restated the brand and the
+ * section's own heading, so they were noise above the headline.
  *
  * The banner backdrop is 2.357:1 and composed with its left half flat and dark
  * (mean luminance 13%) and its subject in the right 44% (52-79%), so the copy sits in
@@ -162,18 +140,27 @@ export function Hero({ section }: { section?: HomeSection }) {
   }, [slides.length, reduceMotion, paused])
 
   const slide = slides[active] ?? slides[0]
-  const eyebrow = section?.eyebrow ?? settings.siteName
-  const picture = slide.backdrop || data.defaultBackdrop
+  const variantSources = useMemo(
+    () =>
+      Object.fromEntries(
+        HERO_VARIANTS.map((variant) => [variant, resolveBackdrop(slide, data, variant)]),
+      ) as Record<HeroVariant, string>,
+    [slide, data],
+  )
+  // The narrowest picture doubles as the `<img src>`: the default when no `<source>`
+  // matches, and the only picture a browser without `<picture>` support ever loads.
+  const picture = variantSources.mobile
   const focalPosition = FOCAL_POSITION[slide.focalPoint ?? 'away-from-text']
   // Deliberately the site name and nothing more specific. Describing what the artwork
   // actually shows is a claim about the brand that has not been made, and an invented
   // alt is worse than a plain one.
   const pictureAlt = settings.siteName
 
-  // The hero's height is the picture's height: the section's box is locked to the image's
-  // real proportions so that object-fit has no room to crop and no bar to leave. The ratio
-  // is read from the loaded <img> rather than assumed, so it follows an editor's upload.
-  const [pictureRatio, setPictureRatio] = useState<string | undefined>(undefined)
+  // The hero is one screen tall and the picture is always painted whole (`object-contain`),
+  // so nothing is cropped and nothing has to be scrolled to be seen. The copy then has to
+  // be placed where the artwork is dark, and the scrim below makes that a guarantee rather
+  // than a property of whichever photograph an editor happened to upload.
+  const [pictureSize, setPictureSize] = useState<{ w: number; h: number } | null>(null)
 
   return (
     <section
@@ -183,18 +170,34 @@ export function Hero({ section }: { section?: HomeSection }) {
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
-      style={pictureRatio ? ({ '--hero-aspect': pictureRatio } as React.CSSProperties) : undefined}
-      className={cn(
-        'relative w-full overflow-hidden border-b border-white/10 bg-royal-gradient text-white',
-        pictureRatio && 'hero-height-locks-to-picture',
-        picture ? 'py-space-md' : 'py-space-lg md:py-space-xl',
-      )}
+      style={
+        {
+          // The copy on a phone starts below the bright top band of the portrait
+          // composition: its height at full width, two-thirds down. Derived from the
+          // loaded file rather than hard-coded, so a different upload still behaves.
+          '--hero-copy-top': pictureSize
+            ? `calc(100vw * ${pictureSize.h} / ${pictureSize.w} * 0.66)`
+            : '0px',
+        } as React.CSSProperties
+      }
+      className="relative flex min-h-[calc(100svh-var(--site-chrome-h,0px))] w-full flex-col overflow-hidden border-b border-white/10 bg-royal-gradient text-white"
     >
       {picture ? (
-        <>
+        <picture className="absolute inset-0 block size-full">
+          {/* Widest first — the first matching media query wins. A variant that is not
+              supplied is simply absent, and the `<img src>` below still covers it. */}
+          {HERO_VARIANTS.map((variant) =>
+            HERO_VARIANT_MEDIA[variant] && variantSources[variant] ? (
+              <source
+                key={variant}
+                media={HERO_VARIANT_MEDIA[variant]}
+                srcSet={variantSources[variant]}
+              />
+            ) : null,
+          )}
           <AnimatePresence mode="wait">
             <motion.img
-              key={picture}
+              key={active}
               src={picture}
               alt={pictureAlt}
               /* The hero picture is the page's LCP element. A real <img> lets the browser
@@ -202,18 +205,19 @@ export function Hero({ section }: { section?: HomeSection }) {
                  invisible until the stylesheet parsed, and had no alt text at all. */
               fetchPriority="high"
               decoding="async"
-              onLoad={(e) => setPictureRatio(`${e.currentTarget.naturalWidth} / ${e.currentTarget.naturalHeight}`)}
+              onLoad={(e) => setPictureSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
               initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease: EASE }}
-              /* The section's box is the picture's own proportions, so nothing can crop
-                 and nothing needs bars; object-cover keeps the picture glued to every edge
-                 even against the moment before --hero-aspect is known. */
-              className={cn('absolute inset-0 size-full object-cover', focalPosition)}
+              /* Contained, never cropped: the whole composition is on screen at every
+                 viewport, which is what makes the four art-directed files worth having.
+                 On a phone it is pinned to the top so the copy can sit under its bright
+                 band; on wider screens the focal point decides the horizontal bias. */
+              className={cn('absolute inset-0 size-full object-contain', focalPosition)}
             />
           </AnimatePresence>
-        </>
+        </picture>
       ) : null}
 
       {/* Ambient luminous orbs */}
@@ -227,48 +231,45 @@ export function Hero({ section }: { section?: HomeSection }) {
       />
       <div className="pointer-events-none absolute bottom-0 left-1/3 size-[30rem] rounded-full bg-accent-gold/10 blur-[90px]" />
 
-      <div className="relative z-10 mx-auto max-w-[1360px] px-margin-mobile md:px-margin">
+      {/* The scrim is the legibility contract. White type on an uploadable photograph
+          cannot rely on the photograph being dark where the copy happens to land, so the
+          copy side is darkened on top of the picture: bottom-up on a phone (the portrait
+          composition is bright at the top), and on the text side from the breakpoint where
+          the copy sits beside the subject. */}
+      {picture ? (
+        <>
+          {/* Phone: the portrait composition is bright across its top half, so everything
+              from the copy's first line down is darkened outright — a fade that starts
+              above the copy would leave the headline on bare artwork. The short gradient
+              above softens the edge instead of cutting it. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[var(--hero-copy-top)] bg-[#050d24]/90 md:hidden" />
+          <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--hero-copy-top)-6rem)] h-24 bg-gradient-to-b from-transparent to-[#050d24]/90 md:hidden" />
+          {/* Tablet: one column, so the copy spans the composition rather than sitting
+              beside the subject — the whole frame has to carry the darkening. */}
+          <div className="pointer-events-none absolute inset-0 hidden bg-[#050d24]/78 md:block lg:hidden" />
+          {/* Desktop: the copy sits on the composition's dark side. The strong stop runs
+              past the copy column, so the last stat label is still on a dark ground, and
+              fades out over the subject so the artwork stays visible. */}
+          <div className="pointer-events-none absolute inset-y-0 start-0 hidden w-[72%] bg-gradient-to-r from-[#050d24]/95 via-[#050d24]/85 via-65% to-transparent lg:block rtl:bg-gradient-to-l" />
+        </>
+      ) : null}
+
+      <div
+        className={cn(
+          // Bottom-aligned on a phone so the copy lands on the composition's dark lower
+          // band; centred beside the subject once there is room for two columns.
+          'relative z-10 mx-auto flex w-full max-w-[1360px] flex-1 flex-col justify-end px-margin-mobile pb-space-lg md:justify-center md:px-margin md:py-space-md',
+          picture ? 'pt-[var(--hero-copy-top)]' : 'pt-space-lg',
+        )}
+      >
         <div className="grid grid-cols-1 items-center gap-gutter lg:grid-cols-12">
           {/* --------------------------------------------------------- copy column */}
           <motion.div
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } } }}
-            className="flex flex-col items-start gap-space-sm lg:col-span-7"
+            className="flex flex-col items-center gap-space-sm text-center lg:col-span-7 md:items-start md:text-left"
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`badge-${active}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.45, ease: EASE }}
-                className="flex items-center gap-space-xs"
-              >
-                <Icon name="workspace_premium" size={22} className="shrink-0 text-accent-gold" />
-                <span className="flex flex-col">
-                  <span className="text-label-sm font-bold uppercase tracking-widest text-accent-gold">
-                    {slide.badge ?? 'Albaik Standard'}
-                  </span>
-                  <span className="text-label-md font-semibold text-white/85">
-                    {slide.badgeSubtitle ?? 'Approved product documentation'}
-                  </span>
-                </span>
-              </motion.div>
-            </AnimatePresence>
-
-            <motion.div variants={fadeChild}>
-              <span className="inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 shadow-inner backdrop-blur-md">
-                <span className="relative flex size-2.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-gold opacity-75" />
-                  <span className="relative inline-flex size-2.5 rounded-full bg-accent-gold" />
-                </span>
-                <span className="text-label-sm font-bold uppercase tracking-widest text-white/90">
-                  {eyebrow}
-                </span>
-              </span>
-            </motion.div>
-
             <AnimatePresence mode="wait">
               <motion.div
                 key={active}
@@ -290,7 +291,7 @@ export function Hero({ section }: { section?: HomeSection }) {
                   <p className="max-w-xl text-body-md leading-relaxed text-white/85">{slide.body}</p>
                 ) : null}
 
-                <div className="flex w-full flex-wrap items-center gap-space-sm pt-space-xs sm:w-auto">
+                <div className="flex w-full flex-wrap items-center justify-center gap-space-sm pt-space-xs sm:w-auto md:justify-start">
                   <ButtonLink
                     to={slide.primaryCtaHref ?? '/collections'}
                     variant="gold"
@@ -358,7 +359,7 @@ export function Hero({ section }: { section?: HomeSection }) {
             ) : null}
 
             {slides.length > 1 ? (
-              <motion.div variants={fadeChild} className="flex items-center gap-space-sm pt-space-xs">
+              <motion.div variants={fadeChild} className="flex items-center justify-center gap-space-sm pt-space-xs md:justify-start">
                 <button
                   type="button"
                   onClick={() => go(active - 1)}
@@ -407,7 +408,7 @@ export function Hero({ section }: { section?: HomeSection }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.4, duration: 0.6 }}
-        className="absolute inset-x-0 bottom-2 z-10 flex justify-center"
+        className="absolute inset-x-0 bottom-2 z-10 hidden justify-center md:flex"
       >
         <Link
           to={slide.primaryCtaHref ?? '/collections'}
@@ -436,40 +437,3 @@ const fadeChild = {
   },
 }
 
-export function parseData(json?: string | null): HeroSectionData {
-  if (!json) return {}
-  try {
-    return JSON.parse(json) as HeroSectionData
-  } catch {
-    return {}
-  }
-}
-
-export function parseSlides(json?: string | null): HeroSlide[] {
-  if (!json) return []
-  try {
-    const value = JSON.parse(json)
-    if (Array.isArray(value)) {
-      return value
-        .filter((s): s is HeroSlide => s && typeof s === 'object')
-        .map((s) => ({
-          backdrop: typeof s.backdrop === 'string' ? s.backdrop : '',
-          focalPoint: FOCAL_POINTS.includes(s.focalPoint as FocalPoint)
-            ? (s.focalPoint as FocalPoint)
-            : 'away-from-text',
-          badge: typeof s.badge === 'string' ? s.badge : '',
-          badgeSubtitle: typeof s.badgeSubtitle === 'string' ? s.badgeSubtitle : '',
-          title: typeof s.title === 'string' ? s.title : '',
-          accentWord: typeof s.accentWord === 'string' ? s.accentWord : '',
-          body: typeof s.body === 'string' ? s.body : '',
-          primaryCtaLabel: typeof s.primaryCtaLabel === 'string' ? s.primaryCtaLabel : '',
-          primaryCtaHref: typeof s.primaryCtaHref === 'string' ? s.primaryCtaHref : '',
-          secondaryCtaLabel: typeof s.secondaryCtaLabel === 'string' ? s.secondaryCtaLabel : '',
-          secondaryCtaHref: typeof s.secondaryCtaHref === 'string' ? s.secondaryCtaHref : '',
-        }))
-    }
-  } catch {
-    /* fall through */
-  }
-  return []
-}

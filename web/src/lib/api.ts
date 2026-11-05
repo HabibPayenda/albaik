@@ -6,11 +6,15 @@ export const USER_KEY = 'albaik.admin.user'
 /**
  * In dev, Vite proxies /api to the .NET server (see vite.config.ts).
  * In production the SPA is served by the API itself, so a relative base works in both.
+ *
+ * No default `Content-Type` is set. Axios already sends `application/json` for plain
+ * object bodies, and setting it here overrode the multipart one on uploads: the browser
+ * then posted `{}` as JSON, the API's `IFormFile` endpoints require a multipart content
+ * type, endpoint selection matched nothing, and every upload failed with a bare 404.
  */
 export const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE ?? '/api',
   timeout: 20000,
-  headers: { 'Content-Type': 'application/json' },
 })
 
 api.interceptors.request.use((config) => {
@@ -65,6 +69,8 @@ export const endpoints = {
 
   pages: '/pages',
   page: (slug: string) => `/pages/${slug}`,
+  /** What a scanned product QR code resolves to. */
+  verify: (code: string) => `/verify/${code}`,
   contact: '/contact',
   newsletter: '/contact/newsletter',
 
@@ -78,6 +84,12 @@ export const endpoints = {
     brands: '/admin/brands',
     products: '/admin/products',
     product: (id: number) => `/admin/products/${id}`,
+    // IBN + verification code + the absolute URL the QR encodes.
+    productVerification: (id: number) => `/admin/products/${id}/verification`,
+    // QR image: `svg` for print, `png` for a quick proof.
+    productQr: (id: number, format: 'svg' | 'png') => `/admin/products/${id}/qr.${format}`,
+    // Replaces the verification code; every printed label with the old one stops verifying.
+    regenerateVerificationCode: (id: number) => `/admin/products/${id}/verification-code`,
     upload: '/admin/upload',
     // Product photographs must be exactly 1080×1350; this route enforces it, while the
     // general route above still accepts collection, brand and section artwork.
@@ -86,6 +98,9 @@ export const endpoints = {
     // Separate route with hero-sized ceilings, so a backdrop is not squeezed into the
     // product-card limits. See docs/adr/0002-backdrop-upload-route.md.
     backdropUpload: '/admin/upload/backdrop',
+    // One path per art-directed breakpoint, each with its own dimension ceiling under the
+    // same 300 KB budget. See docs/adr/0007-hero-backdrop-per-breakpoint.md.
+    backdropVariantUpload: (variant: string) => `/admin/upload/backdrop/${variant}`,
     homeSections: '/admin/home-sections',
     heroStats: '/admin/hero-stats',
     testimonials: '/admin/testimonials',

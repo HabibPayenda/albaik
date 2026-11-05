@@ -79,6 +79,26 @@ public class Product
     public string? BadgeStyle { get; set; }
     public string? StockStatus { get; set; } = "InStock";
 
+    /// <summary>
+    /// The product's number in the International Barcode Network. Digits only, unique
+    /// across the catalogue, and optional while the numbers are still being collected.
+    /// It identifies the product and proves nothing on its own — the QR code carries a
+    /// separate verification code. See docs/adr/0008-verification-code-is-stored-not-derived.md.
+    /// </summary>
+    public string? Ibn { get; set; }
+
+    /// <summary>
+    /// The opaque token inside this product's QR code. Generated once, stored, and
+    /// replaced only through the password-confirmed regenerate action. Never derived
+    /// from the product, so rotating a server secret cannot invalidate printed labels.
+    ///
+    /// Nullable on purpose: a database that predates this feature has no value for its
+    /// existing rows, and <see cref="Services.SchemaGuard"/> can only add nullable
+    /// columns. The code is minted on first use. SQLite treats NULLs as distinct, so the
+    /// unique index tolerates the gap while rows are still unminted.
+    /// </summary>
+    public string? VerificationCode { get; set; }
+
     public string? ImageUrl { get; set; }
     public string? AccentFrom { get; set; }
     public string? AccentTo { get; set; }

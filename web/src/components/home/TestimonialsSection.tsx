@@ -38,7 +38,7 @@ export function TestimonialsSection({ section }: { section?: HomeSection }) {
               <motion.figure
                 whileHover={{ y: -6 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-                className="relative flex h-full flex-col justify-between gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-sm transition-shadow duration-300 hover:shadow-e2"
+                className="relative flex h-full flex-col justify-between gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg text-center shadow-sm transition-shadow duration-300 hover:shadow-e2 md:text-left"
               >
                 <Quote
                   size={72}
@@ -46,7 +46,14 @@ export function TestimonialsSection({ section }: { section?: HomeSection }) {
                   aria-hidden="true"
                 />
                 <div className="relative flex flex-col gap-space-xs">
-                  <StarRating value={testimonial.rating} showValue={false} size={18} />
+                  {/* The stars are a flex row, so they stay left inside the column unless
+                      they are told otherwise; on a phone the whole card is centred. */}
+                  <StarRating
+                    value={testimonial.rating}
+                    showValue={false}
+                    size={18}
+                    className="justify-center md:justify-start"
+                  />
                   {testimonial.title ? (
                     <blockquote className="mt-2 font-display text-headline-sm font-semibold text-on-surface">
                       {testimonial.title}
@@ -58,7 +65,7 @@ export function TestimonialsSection({ section }: { section?: HomeSection }) {
                     </p>
                   ) : null}
                 </div>
-                <figcaption className="flex items-center gap-3 border-t border-outline-variant/30 pt-space-sm">
+                <figcaption className="flex items-center justify-center gap-3 border-t border-outline-variant/30 pt-space-sm md:justify-start">
                   <span className="flex size-10 items-center justify-center rounded-full bg-royal-gradient-compact text-label-md font-bold text-white">
                     {testimonial.initials || toInitials(testimonial.name)}
                   </span>

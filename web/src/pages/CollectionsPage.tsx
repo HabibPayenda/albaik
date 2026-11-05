@@ -134,7 +134,7 @@ export function CollectionsPage() {
               <StaggerItem key={item.id} className="h-full">
                 <Link
                   to={`/collections/${item.slug}`}
-                  className="group relative flex h-full flex-col gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:border-accent-gold/50 hover:shadow-e3"
+                  className="group relative flex h-full flex-col items-center gap-space-md overflow-hidden rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg text-center shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:border-accent-gold/50 hover:shadow-e3 md:items-stretch md:text-left"
                 >
                   <span
                     className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gold-gradient transition-transform duration-300 group-hover:scale-x-100"
@@ -145,7 +145,7 @@ export function CollectionsPage() {
                     <Icon name={item.icon} size={22} />
                   </span>
 
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col items-center gap-1 md:items-stretch">
                     <span className="font-display text-headline-sm font-semibold text-on-surface transition-colors duration-300 group-hover:text-primary-container">
                       {item.name}
                     </span>
@@ -166,7 +166,7 @@ export function CollectionsPage() {
                    * `lg` the card is only ~180px wide inside its padding, and
                    * "2 brands · 11 products" plus "Explore →" overflowed it.
                    */}
-                  <div className="mt-auto flex flex-col gap-space-xs border-t border-outline-variant/30 pt-space-sm">
+                  <div className="mt-auto flex w-full flex-col items-center gap-space-xs border-t border-outline-variant/30 pt-space-sm md:items-stretch">
                     <span className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
                       {plural(item.brandCount, 'brand')} · {plural(item.productCount, 'product')}
                     </span>

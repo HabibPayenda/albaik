@@ -25,7 +25,8 @@ public static class Mapping
         p.Badge, p.BadgeStyle, p.StockStatus, p.ImageUrl, p.AccentFrom, p.AccentTo,
         p.Benefits, p.Ingredients, p.IsFeatured,
         p.BrandId, p.Brand?.Slug, p.Brand?.Name,
-        p.CategoryId, p.Category?.Slug, p.Category?.Name);
+        p.CategoryId, p.Category?.Slug, p.Category?.Name,
+        p.Ibn);
 
     public static ProductDetailDto ToDetail(this Product p, List<ProductCardDto> related) => new(
         p.Id, p.Slug, p.Name, p.Subtitle, p.FormulationLabel, p.ShortDescription, p.Description,
@@ -37,7 +38,8 @@ public static class Mapping
         p.BrandId, p.Brand?.Slug, p.Brand?.Name, p.Brand?.Tagline,
         p.CategoryId, p.Category?.Slug, p.Category?.Name,
         p.Images.OrderBy(i => i.SortOrder).Select(i => new ProductImageDto(i.Id, i.Url, i.Alt, i.SortOrder)).ToList(),
-        related);
+        related,
+        p.Ibn);
 
     public static BrandDto ToDto(this Brand b, List<ProductCardDto>? products = null) => new(
         b.Id, b.Slug, b.Name, b.Tagline, b.Description, b.LogoUrl, b.ImageUrl, b.Accent,

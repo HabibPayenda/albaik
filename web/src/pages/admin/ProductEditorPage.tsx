@@ -9,6 +9,7 @@ import { pushToast } from '@/store/uiSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { AdminCard, AdminPageHeader } from '@/components/admin/AdminUI'
 import { ImageField, ImageGalleryField } from '@/components/admin/ImageField'
+import { ProductVerificationCard } from '@/components/admin/ProductVerificationCard'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { Field, Select, TagInput, TextArea, TextInput, Toggle } from '@/components/ui/Field'
 import { ProductImage } from '@/components/ui/ProductImage'
@@ -47,6 +48,7 @@ const EMPTY: ProductInput = {
   howToUse: '',
   safetyNote: '',
   suitableFor: '',
+  ibn: '',
   isFeatured: false,
   isActive: true,
   sortOrder: 0,
@@ -59,6 +61,7 @@ const SECTIONS = [
   { key: 'copy', label: 'Description', icon: 'page' },
   { key: 'benefits', label: 'Benefits & ingredients', icon: 'check_circle' },
   { key: 'media', label: 'Media', icon: 'image' },
+  { key: 'verification', label: 'Verification', icon: 'verified_user' },
 ] as const
 
 export default function ProductEditorPage() {
@@ -122,6 +125,7 @@ export default function ProductEditorPage() {
           howToUse: data.howToUse ?? '',
           safetyNote: data.safetyNote ?? '',
           suitableFor: data.suitableFor ?? '',
+          ibn: data.ibn ?? '',
           isFeatured: data.isFeatured,
           isActive: data.isActive,
           sortOrder: data.sortOrder,
@@ -388,6 +392,20 @@ export default function ProductEditorPage() {
                         <option value="OutOfStock">Out of stock</option>
                         <option value="Discontinued">Discontinued</option>
                       </Select>
+                    </Field>
+
+                    <Field
+                      label="IBN"
+                      htmlFor="p-ibn"
+                      hint="The product's number in the International Barcode Network. Digits only, and no two products may share one. Leave empty until the number is known."
+                    >
+                      <TextInput
+                        id="p-ibn"
+                        inputMode="numeric"
+                        value={form.ibn ?? ''}
+                        onChange={(event) => set('ibn', event.target.value.replace(/\D+/g, ''))}
+                        placeholder="6291104123456"
+                      />
                     </Field>
 
                     <Field label="Sort order" htmlFor="p-order" hint="Lower numbers appear first.">
@@ -710,6 +728,19 @@ export default function ProductEditorPage() {
                     </div>
                   </div>
                 </AdminCard>
+              ) : null}
+
+              {section === 'verification' ? (
+                isNew ? (
+                  <AdminCard title="Verification QR code">
+                    <p className="text-body-sm text-on-surface-variant">
+                      Save the product first. Its verification code is generated when the product exists, so the
+                      printed QR code is tied to a real product rather than to a draft.
+                    </p>
+                  </AdminCard>
+                ) : (
+                  <ProductVerificationCard productId={Number(productId)} productName={form.name} />
+                )
               ) : null}
             </motion.div>
           </AnimatePresence>

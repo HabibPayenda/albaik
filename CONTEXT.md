@@ -46,12 +46,14 @@ _Avoid_: Section, block, component.
 
 **Hero slide**:
 One entry in the home hero's carousel. Each slide carries its own headline,
-calls to action, badge and backdrop, and staff may add, remove or reorder them.
+calls to action and backdrop, and staff may add, remove or reorder them.
 _Avoid_: Banner, slide deck, carousel item.
 
 **Backdrop**:
-The full-width photograph behind a hero slide's text. A slide shows at most one
-image and it always sits behind the content, never beside it.
+The full-width photograph behind a hero slide's text. A slide carries at most one
+picture per breakpoint — ultrawide, desktop, tablet and mobile are separate
+compositions, not one picture cropped four ways — and it always sits behind the
+content, never beside it.
 _Avoid_: Image, picture, hero image. The word "image" is reserved for photographs
 of the products themselves.
 
@@ -66,11 +68,6 @@ rather than from a physical edge, so it means the same thing in every writing
 direction.
 _Avoid_: Object position, image position, crop anchor.
 
-**Slide badge**:
-The small trust marker on a slide — an uppercase label with a supporting line,
-such as an approvals statement. It belongs to the slide, not to any product, and
-it sits within the slide's text.
-_Avoid_: Trust badge, ribbon, tag.
 
 **Product plate**:
 The branded gradient panel that stands in for a product that has no
@@ -84,3 +81,22 @@ One claim in the home page's approach section — an icon, a short headline and 
 supporting line used to reassure the visitor. Every pillar is a separate row a
 staff member can add, remove or reorder.
 _Avoid_: Trust ribbon, approach pillar, USP.
+
+**IBN**:
+A product's number in the International Barcode Network — one per product,
+digits only, and unique across the catalogue. It identifies the product; it
+proves nothing on its own, and the QR code does not contain it.
+_Avoid_: Barcode, SKU, GTIN, IBN number.
+
+**Verification code**:
+The opaque, unguessable token carried inside a product's QR code. One per
+product, generated once and stored, and deliberately separate from the IBN;
+scanning it opens the verification page. Replacing it invalidates every QR code
+already printed with the old one.
+_Avoid_: QR code (that is the image), serial, IBN.
+
+**Verification page**:
+The screen a scanned QR code opens. It states that the product is genuine, names
+it, and after five seconds continues to the product's own page. It confirms that
+the product is in the catalogue — not that a particular unit left the factory.
+_Avoid_: Landing page, redirect page, scanner page.

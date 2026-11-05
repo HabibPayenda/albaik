@@ -27,7 +27,7 @@ export function DistributionSection({ section }: { section?: HomeSection }) {
           <div className="pointer-events-none absolute -top-20 -left-20 size-80 rounded-full bg-accent-gold/15 blur-3xl" />
 
           <div className="relative z-10 grid grid-cols-1 items-center gap-gutter lg:grid-cols-12">
-            <div className="flex flex-col gap-space-sm lg:col-span-8">
+            <div className="flex flex-col items-center gap-space-sm text-center lg:col-span-8 md:items-start md:text-left">
               {section?.eyebrow ? (
                 <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3.5 py-1 text-label-sm font-bold uppercase tracking-widest text-accent-gold backdrop-blur-md">
                   {section.eyebrow}
@@ -42,7 +42,7 @@ export function DistributionSection({ section }: { section?: HomeSection }) {
                 <p className="max-w-2xl text-body-md leading-relaxed text-white/85">{section.subtitle}</p>
               ) : null}
 
-              <div className="flex flex-wrap items-center gap-space-md pt-space-xs">
+              <div className="flex flex-wrap items-center justify-center gap-space-md pt-space-xs md:justify-start">
                 {settings.address ? (
                   <span className="flex items-center gap-2 text-label-md text-white/90">
                     <Icon name="location_on" size={17} className="text-accent-gold" />

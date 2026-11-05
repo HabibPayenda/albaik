@@ -110,7 +110,7 @@ export function ResultsBar({
   right?: React.ReactNode
 }) {
   return (
-    <div className="mb-space-md flex flex-wrap items-center justify-between gap-space-sm border-b border-outline-variant/40 pb-space-sm">
+    <div className="mb-space-md flex flex-wrap items-center justify-center gap-space-sm border-b border-outline-variant/40 pb-space-sm text-center md:justify-between md:text-left">
       <p className="text-body-sm text-on-surface-variant">
         <span className="font-semibold text-on-surface">{total}</span> {label}
       </p>

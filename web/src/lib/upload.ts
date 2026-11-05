@@ -11,14 +11,26 @@ export interface UploadedImage {
  *   brand and section artwork.
  * - `product-photo` — a product photograph, which the route accepts only at exactly
  *   1080×1350 (see docs/adr/0006-product-images-are-framed-4-5.md).
- * - `backdrop` — the hero ceilings, because a backdrop is displayed at viewport width and
- *   the product limits are sized for a card.
+ * - `backdrop` — the legacy single hero backdrop (300 KB, 2560px longest edge).
+ * - `backdrop-<variant>` — one art-directed hero composition per breakpoint, each with
+ *   its own dimension ceiling under the same 300 KB budget
+ *   (see docs/adr/0007-hero-backdrop-per-breakpoint.md).
  */
-export type UploadKind = 'product' | 'product-photo' | 'backdrop'
+export type UploadKind =
+  | 'product'
+  | 'product-photo'
+  | 'backdrop'
+  | 'backdrop-ultrawide'
+  | 'backdrop-desktop'
+  | 'backdrop-tablet'
+  | 'backdrop-mobile'
 
 function uploadEndpoint(kind: UploadKind): string {
-  if (kind === 'backdrop') return endpoints.admin.backdropUpload
   if (kind === 'product-photo') return endpoints.admin.productUpload
+  if (kind === 'backdrop') return endpoints.admin.backdropUpload
+  if (kind.startsWith('backdrop-')) {
+    return endpoints.admin.backdropVariantUpload(kind.slice('backdrop-'.length))
+  }
   return endpoints.admin.upload
 }
 

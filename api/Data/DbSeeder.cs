@@ -70,6 +70,16 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
+        // Same reasoning as the settings above: a database created before printed QR codes
+        // existed must still get the field, or staff have nowhere to set the origin the
+        // codes encode. Empty is the right default — it falls back to the request host,
+        // which is the public domain when the site serves its own dashboard.
+        if (!await db.SiteSettings.AnyAsync(s => s.Key == "site.publicBaseUrl"))
+        {
+            db.SiteSettings.Add(S("site.publicBaseUrl", "", "general", "Public site URL (used in product QR codes)", "text"));
+            await db.SaveChangesAsync();
+        }
+
         if (await db.Categories.AnyAsync()) return;
 
         logger.LogInformation("Seeding Albaik catalogue and content…");
@@ -171,30 +181,38 @@ public static class DbSeeder
             new HomeSection
             {
                 Key = "hero", SectionType = "hero", SortOrder = 1,
-                Eyebrow = "Albaik Group of Companies",
                 Title = "The Mark of",
                 Subtitle = "Care that starts with what matters.",
                 Body = "Discover Albaik's range of personal-care, hair-care, beauty, oral-care and everyday products — developed around practical product purposes, consistent quality and everyday care. Explore the Albaik and Avora Shine collections and find products designed for different hair, skin and personal-care needs.",
                 PrimaryCtaLabel = "Explore the Collections", PrimaryCtaHref = "/collections",
                 SecondaryCtaLabel = "Our Product Approach", SecondaryCtaHref = "/about",
-                DataJson = "{\"accentWord\":\"Pure Perfection.\",\"defaultBackdrop\":\"\",\"badgeTitle\":\"Established Standard\",\"badgeSubtitle\":\"Approved product documentation\"}",
-                // The hero is a carousel. Each slide carries its own backdrop, focal point,
-                // badge, headline (title + accent word), body and both CTAs, so an editor can
+                DataJson = "{\"accentWord\":\"Pure Perfection.\",\"defaultBackdrop\":\"\"}",
+                // The hero is a carousel. Each slide carries its own backdrop set, focal
+                // point, headline (title + accent word), body and both CTAs, so an editor can
                 // add, remove or reorder slides from the dashboard without a redeploy. The copy
                 // here is the same approved wording that used to live on the single hero — do
-                // not paraphrase.
+                // not paraphrase. The slide badge and the site-name eyebrow were removed: they
+                // restated the brand above the headline.
                 //
-                // Only the first slide has a backdrop, because only one banner artwork exists.
-                // Slides two and three deliberately fall through to the royal gradient: with a
-                // default backdrop set they would all render the same photo and the carousel
-                // would look static. See docs/adr/0001-hero-backdrop-per-slide.md.
+                // Only the first slide has artwork, because only one banner campaign exists.
+                // It is supplied as four art-directed compositions rather than one picture
+                // cropped four ways, so the phone banner is a portrait composition and the
+                // desktop one is not. Slides two and three deliberately fall through to the
+                // royal gradient: with a default backdrop set they would all render the same
+                // photo and the carousel would look static.
+                // See docs/adr/0001-hero-backdrop-per-slide.md and
+                // docs/adr/0007-hero-backdrop-per-breakpoint.md.
                 SlidesJson = """
                 [
                   {
-                    "backdrop": "/hero-banner.webp",
+                    "backdrop": "",
+                    "backdrops": {
+                      "ultrawide": "/hero-banner-ultrawide.webp",
+                      "desktop": "/hero-banner-desktop.webp",
+                      "tablet": "/hero-banner-tablet.webp",
+                      "mobile": "/hero-banner-mobile.webp"
+                    },
                     "focalPoint": "away-from-text",
-                    "badge": "Established Standard",
-                    "badgeSubtitle": "Approved product documentation",
                     "title": "The Mark of",
                     "accentWord": "Pure Perfection.",
                     "body": "Discover Albaik's range of personal-care, hair-care, beauty, oral-care and everyday products — developed around practical product purposes, consistent quality and everyday care.",
@@ -206,8 +224,6 @@ public static class DbSeeder
                   {
                     "backdrop": "",
                     "focalPoint": "away-from-text",
-                    "badge": "Two house brands",
-                    "badgeSubtitle": "Albaik & Avora Shine",
                     "title": "Built Around",
                     "accentWord": "Real Needs.",
                     "body": "From everyday haircare to considered beauty and oral care, every product is matched to what it is designed to do — not a one-size-fits-all promise.",
@@ -219,8 +235,6 @@ public static class DbSeeder
                   {
                     "backdrop": "",
                     "focalPoint": "away-from-text",
-                    "badge": "Consistent quality",
-                    "badgeSubtitle": "Defined requirements",
                     "title": "Quality You",
                     "accentWord": "Can Trust.",
                     "body": "Appropriate raw materials, defined product functions, manufacturing requirements and clear information for proper use — the same standard across every collection.",
@@ -644,6 +658,9 @@ public static class DbSeeder
             Badge = badge, BadgeStyle = accent,
             Rating = null, ReviewCount = 0,
             StockStatus = "InStock",
+            // Every product owns one verification code from birth; the unique index needs
+            // a distinct value per row, and a printed QR must never be minted twice.
+            VerificationCode = VerificationCodes.New(),
             AccentFrom = AccentHex(accent, true), AccentTo = AccentHex(accent, false)
         };
 

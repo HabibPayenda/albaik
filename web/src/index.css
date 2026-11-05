@@ -212,6 +212,19 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* The route-change fade, as CSS rather than a framer `AnimatePresence` transition.
+   `both` fill means the last frame is the resting state, so an interrupted or skipped
+   animation still ends visible — the framer variant could leave a page at `opacity: 0`
+   with its content already in the DOM, which reads as a blank page until a refresh. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.page-enter {
+  animation: page-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ==========================================================================
    Base layer
    ======================================================================== */
@@ -394,17 +407,11 @@ html.lenis, html.lenis body { height: auto; }
   }
 }
 
-/* The hero locks its height to the picture's aspect when the viewport is wide enough
-   for the copy to fit inside that band; below it the content column needs more height
-   than a 2.357:1 band allows and stays content-driven. The ratio is carried in
-   --hero-aspect, set from the <img>'s naturalWidth/naturalHeight, so an editor's upload
-   controls the height exactly — hard-coding 2560/1086 would silently break the moment the
-   hosted picture changes proportions. */
-@media (min-width: 1280px) {
-  .hero-height-locks-to-picture {
-    aspect-ratio: var(--hero-aspect, 2560 / 1086);
-  }
-}
+/* The hero no longer locks its height to the picture's aspect. It is one viewport tall
+   (`min-h-svh`) and the picture is painted `object-contain`, so the whole composition is
+   on screen at every size without cropping or scrolling. The copy's placement over the
+   artwork's dark band is handled in Hero.tsx, together with the scrim that keeps white
+   type legible whatever photograph is uploaded. */
 
 /* Respect the user's motion preference everywhere. */
 @media (prefers-reduced-motion: reduce) {

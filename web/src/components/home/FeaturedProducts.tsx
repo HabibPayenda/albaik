@@ -54,7 +54,7 @@ export function FeaturedProducts({ section }: { section?: HomeSection }) {
 
           {filters.length > 2 ? (
             <div
-              className="flex items-center gap-1.5 self-start overflow-x-auto rounded-full bg-surface-container-low p-1 shadow-sm md:self-auto"
+              className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto rounded-full bg-surface-container-low p-1 shadow-sm lg:w-auto lg:self-auto"
               role="tablist"
               aria-label="Filter formulations"
             >
@@ -111,6 +111,7 @@ export function FeaturedProducts({ section }: { section?: HomeSection }) {
                   currency={settings.currency}
                   priority={index < 4}
                   className="h-full"
+                  centered
                 />
               </motion.div>
             ))}

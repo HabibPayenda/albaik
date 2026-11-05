@@ -23,7 +23,8 @@ public record ProductCardDto(
     string? StockStatus, string? ImageUrl, string? AccentFrom, string? AccentTo,
     List<string> Benefits, List<string> Ingredients, bool IsFeatured,
     int BrandId, string? BrandSlug, string? BrandName,
-    int CategoryId, string? CategorySlug, string? CategoryName);
+    int CategoryId, string? CategorySlug, string? CategoryName,
+    string? Ibn);
 
 public record ProductDetailDto(
     int Id, string Slug, string Name, string? Subtitle, string? FormulationLabel,
@@ -37,9 +38,27 @@ public record ProductDetailDto(
     int BrandId, string? BrandSlug, string? BrandName, string? BrandTagline,
     int CategoryId, string? CategorySlug, string? CategoryName,
     List<ProductImageDto> Images,
-    List<ProductCardDto> Related);
+    List<ProductCardDto> Related,
+    string? Ibn);
 
 public record ProductImageDto(int Id, string Url, string? Alt, int SortOrder);
+
+/// <summary>
+/// What a scanned QR code resolves to. Deliberately a summary: the verification page
+/// only needs enough to name and picture the product.
+/// </summary>
+public record VerifyProductDto(
+    string Slug, string Name, string? BrandName, string? ImageUrl,
+    string? Subtitle, string? FormulationLabel, string? Ibn);
+
+/// <summary>
+/// Replacing a verification code invalidates every label already printed with the old
+/// one, so the request carries the admin's password as confirmation.
+/// </summary>
+public class RegenerateVerificationCodeInput
+{
+    public string Password { get; set; } = "";
+}
 
 public record SiteSettingDto(string Key, string? Value, string Group, string? Label, string InputType, int SortOrder);
 
@@ -148,6 +167,8 @@ public class ProductInput
     public string? HowToUse { get; set; }
     public string? SafetyNote { get; set; }
     public string? SuitableFor { get; set; }
+    /// <summary>Digits only, unique across the catalogue, optional while the numbers are being collected.</summary>
+    public string? Ibn { get; set; }
     public bool IsFeatured { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }

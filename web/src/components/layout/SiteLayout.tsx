@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ArrowUp } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchBootstrap } from '@/store/siteSlice'
 import { cn } from '@/lib/utils'
-import { pageTransition } from '@/lib/motion'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { AnnouncementTicker } from './AnnouncementTicker'
@@ -13,6 +12,9 @@ import { SearchOverlay } from './SearchOverlay'
 import { SmoothScroll, scrollToTop } from './SmoothScroll'
 import { Toaster } from '@/components/ui/Feedback'
 import { InstallPrompt } from './InstallPrompt'
+import { useOnline } from '@/hooks/useOnline'
+import { useI18n } from '@/i18n'
+import { Icon } from '@/components/ui/Icon'
 
 /**
  * The public marketing shell. React Router renders every visitor-facing route inside
@@ -38,6 +40,9 @@ export function SiteLayout() {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const status = useAppSelector((state) => state.site.status)
+  const mainRef = useRef<HTMLElement>(null)
+  const online = useOnline()
+  const { t } = useI18n()
 
   // Load global configuration once for the whole session.
   useEffect(() => {
@@ -48,6 +53,31 @@ export function SiteLayout() {
   useEffect(() => {
     scrollToTop()
   }, [location.pathname])
+
+  /*
+   * The home hero sizes itself to the space left under the site chrome, so the whole
+   * composition is on screen without scrolling. The announcement ticker and the sticky
+   * header are both in normal flow, so their combined height is exactly `main`'s offset
+   * from the top of the document. Measured rather than hard-coded: the ticker is empty
+   * when no announcements are set, and a constant would be wrong in that state.
+   */
+  useEffect(() => {
+    const measure = () => {
+      const main = mainRef.current
+      if (!main) return
+      const top = main.getBoundingClientRect().top + window.scrollY
+      document.documentElement.style.setProperty('--site-chrome-h', `${Math.round(top)}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    // Bootstrap lands after mount and can add the ticker, changing the chrome height.
+    const observer = new ResizeObserver(measure)
+    observer.observe(document.body)
+    return () => {
+      window.removeEventListener('resize', measure)
+      observer.disconnect()
+    }
+  }, [])
 
   return (
     /*
@@ -60,20 +90,36 @@ export function SiteLayout() {
       <SmoothScroll />
 
       <AnnouncementTicker />
+
+      {/*
+        The offline notice is in flow rather than floating: it changes the height of the
+        chrome, and `--site-chrome-h` is re-measured when that happens, so the hero keeps
+        filling exactly the space left under it.
+      */}
+      {!online ? (
+        <div className="border-b border-accent-gold/40 bg-accent-gold text-primary-container">
+          <div className="mx-auto flex max-w-[1360px] items-center justify-center gap-2 px-margin-mobile py-2 text-label-md font-semibold md:px-margin">
+            <Icon name="warning" size={15} className="shrink-0" />
+            <span>{t('errors.offlineBanner')}</span>
+          </div>
+        </div>
+      ) : null}
+
       <Header />
 
-      <main className="flex-1">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            variants={pageTransition}
-            initial="hidden"
-            animate="show"
-            exit="exit"
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+      <main ref={mainRef} className="flex-1">
+        {/*
+          The page fades in with a CSS animation rather than a framer `AnimatePresence`
+          transition. The animated version waited for the outgoing page to finish exiting
+          before mounting the incoming one, and when a lazy route resolved during that
+          hand-off the new page could be left at its `initial` state — `opacity: 0` with
+          the content already in the DOM, which reads as a completely white page until a
+          refresh. A CSS animation cannot get stuck: `both` fill means the final frame is
+          the resting state even if the animation never runs.
+        */}
+        <div key={location.pathname} className="page-enter">
+          <Outlet />
+        </div>
       </main>
 
       <Footer />

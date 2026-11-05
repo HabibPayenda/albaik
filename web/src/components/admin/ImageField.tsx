@@ -28,6 +28,19 @@ import { cn } from '@/lib/utils'
  * and driven by its own `<label>`, because styling a file input directly is not reliable.
  * The URL box stays as a fallback for images that live somewhere else already.
  */
+/**
+ * The preview frames. Each one mirrors the shape the target surface paints, so the editor
+ * sees the crop rather than a generic box: a hero composition uploaded into the wrong
+ * breakpoint reads as wrong immediately.
+ */
+const ASPECT_FRAME: Record<'video' | 'square' | 'ultrawide' | 'tablet' | 'portrait', string> = {
+  video: 'aspect-video',
+  square: 'aspect-square max-w-[10rem]',
+  ultrawide: 'aspect-[236/100]',
+  tablet: 'aspect-[4/3] max-w-[16rem]',
+  portrait: 'aspect-[3/4] max-w-[10rem]',
+}
+
 export function ImageField({
   id,
   value,
@@ -41,9 +54,9 @@ export function ImageField({
   value: string
   onChange: (url: string) => void
   placeholder?: string
-  /** `video` suits banners and hero artwork; `square` suits logos and icons. */
-  aspect?: 'video' | 'square'
-  /** `product-photo` enforces exactly 1080×1350; `backdrop` routes to the hero ceilings. */
+  /** The preview frame. `video` suits banners and hero artwork; `square` suits logos. */
+  aspect?: 'video' | 'square' | 'ultrawide' | 'tablet' | 'portrait'
+  /** `product-photo` enforces exactly 1080×1350; `backdrop-*` routes to a breakpoint. */
   kind?: UploadKind
   disabled?: boolean
 }) {
@@ -108,9 +121,7 @@ export function ImageField({
           'relative flex items-center justify-center overflow-hidden rounded-xl border border-dashed border-outline-variant bg-surface-container-low',
           productPhoto
             ? 'aspect-[4/5] max-w-[10rem]'
-            : aspect === 'video'
-              ? 'aspect-video'
-              : 'aspect-square max-w-[10rem]',
+            : ASPECT_FRAME[aspect],
         )}
       >
         {value ? (
