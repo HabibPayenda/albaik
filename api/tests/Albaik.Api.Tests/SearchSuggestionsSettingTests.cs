@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Albaik.Api.Dtos;
-using Microsoft.Data.Sqlite;
+using MySqlConnector;
 using Xunit;
 
 namespace Albaik.Api.Tests;
@@ -120,14 +120,14 @@ public class SearchSuggestionsSettingTests : IClassFixture<AlbaikApiFactory>
         // `icons.disabled` is also JSON-typed but holds an array of strings, so the chip
         // validation must be scoped to the search setting — otherwise saving the System
         // tab fails on every edit of a non-chip JSON row.
-        var dbPath = Path.Combine(Path.GetTempPath(), $"albaik-upgrade-icons-{Guid.NewGuid():N}.db");
-        using (var first = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: true))
+        var databaseName = $"albaik_upgrade_icons_{Guid.NewGuid():N}";
+        using (var first = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: true))
         using (var client = first.CreateClient())
         {
             (await client.GetAsync("/api/home")).EnsureSuccessStatusCode();
         }
 
-        using var factory = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: false);
+        using var factory = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: false);
         using var admin = factory.AdminClient();
         var row = new SiteSettingDto("icons.disabled", """["droplet","leaf"]""", "system", "Disabled icons", "json", 0);
 
@@ -147,22 +147,25 @@ public class SearchSuggestionsSettingTests : IClassFixture<AlbaikApiFactory>
         // seeded database, then remove the row. Reboot must top it back up, or the Search
         // tab would be missing from the settings screen and the overlay would silently run
         // on its bundled chips forever.
-        var dbPath = Path.Combine(Path.GetTempPath(), $"albaik-upgrade-search-{Guid.NewGuid():N}.db");
-        using (var first = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: true))
+        var databaseName = $"albaik_upgrade_search_{Guid.NewGuid():N}";
+        string connectionString;
+        using (var first = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: true))
         using (var client = first.CreateClient())
         {
+            connectionString = first.ConnectionString;
             (await client.GetAsync("/api/home")).EnsureSuccessStatusCode();
         }
 
-        await using (var connection = new SqliteConnection($"Data Source={dbPath}"))
+        await using (var connection = new MySqlConnection(connectionString))
         {
             await connection.OpenAsync();
             await using var del = connection.CreateCommand();
-            del.CommandText = $"DELETE FROM \"SiteSettings\" WHERE \"Key\" = '{Key}'";
+            del.CommandText = "DELETE FROM `SiteSettings` WHERE `Key` = @key";
+            del.Parameters.AddWithValue("@key", Key);
             await del.ExecuteNonQueryAsync();
         }
 
-        using var factory = AlbaikApiFactory.ForUpgradeScenario(dbPath, keepDatabaseForFirstBoot: false);
+        using var factory = AlbaikApiFactory.ForUpgradeScenario(databaseName, keepDatabaseForFirstBoot: false);
         using var booted = factory.AdminClient();
         var settings = await booted.GetFromJsonAsync<List<SiteSettingDto>>("/api/admin/settings");
 

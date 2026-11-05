@@ -93,9 +93,9 @@ public class Product
     /// from the product, so rotating a server secret cannot invalidate printed labels.
     ///
     /// Nullable on purpose: a database that predates this feature has no value for its
-    /// existing rows, and <see cref="Services.SchemaGuard"/> can only add nullable
-    /// columns. The code is minted on first use. SQLite treats NULLs as distinct, so the
-    /// unique index tolerates the gap while rows are still unminted.
+    /// existing rows. The code is minted on first use. MariaDB treats NULLs as distinct
+    /// in a unique index, so the unique index tolerates the gap while rows are still
+    /// unminted.
     /// </summary>
     public string? VerificationCode { get; set; }
 

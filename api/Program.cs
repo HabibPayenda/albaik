@@ -10,26 +10,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------------------ services
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-                       ?? "Data Source=albaik.db";
+var connectionString = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException(
+        "ConnectionStrings:Default is not configured. Set the ConnectionStrings__Default "
+        + "environment variable (or the host's connection string) before starting the application.");
 
-// SQLite resolves a relative Data Source against the process' current
-// directory, which under IIS is not the app folder. Pin the database file to
-// the content root so it is always created and opened next to the app.
-if (builder.Configuration["ConnectionStrings:Default"] is { } raw &&
-    raw.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
-{
-    var csb = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(raw);
-    if (!string.IsNullOrWhiteSpace(csb.DataSource) &&
-        !Path.IsPathRooted(csb.DataSource) &&
-        !csb.DataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
-    {
-        csb.DataSource = Path.Combine(builder.Environment.ContentRootPath, csb.DataSource);
-        connectionString = csb.ConnectionString;
-    }
-}
-
-builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(connectionString));
+// The production host is MariaDB 10.10. Pin the version so providers do not
+// auto-detect the (possibly newer) local server and emit SQL for the wrong target.
+builder.Services.AddDbContext<AppDbContext>(o =>
+    o.UseMySql(connectionString, new MariaDbServerVersion(new Version(10, 10, 0))));
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
@@ -100,12 +90,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet("/api/health", () => Results.Ok(new
+app.MapGet("/api/health", async (AppDbContext db, CancellationToken ct) =>
 {
-    status = "ok",
-    service = "Albaik API",
-    time = DateTime.UtcNow
-}));
+    var connectable = await db.Database.CanConnectAsync(ct);
+    var payload = new
+    {
+        status = connectable ? "ok" : "unavailable",
+        service = "Albaik API",
+        database = connectable ? "connected" : "unreachable",
+        time = DateTime.UtcNow
+    };
+
+    return connectable
+        ? Results.Ok(payload)
+        : Results.Json(payload, statusCode: StatusCodes.Status503ServiceUnavailable);
+});
 
 // The SPA's own client-side routing handles every non-api, non-upload path once
 // index.html is loaded; make sure IIS/Kestrel hands deep links (/collections/hair-care)
@@ -147,12 +146,19 @@ try
     logger.LogInformation("Albaik starting: Environment={Environment}, ContentRoot={ContentRoot}",
         app.Environment.EnvironmentName, app.Environment.ContentRootPath);
 
-    await db.Database.EnsureCreatedAsync();
-    logger.LogInformation("Database ready: {DataSource}", db.Database.GetConnectionString()?.Replace("Password=", "Password=***", StringComparison.OrdinalIgnoreCase));
+    await db.Database.MigrateAsync();
 
-    // No migrations in this project, so the file can lag the model. Repair the
-    // gap before the seeder or any request touches a missing column.
-    await SchemaGuard.SyncAsync(db, logger);
+    var dbConnection = db.Database.GetDbConnection();
+    await db.Database.OpenConnectionAsync();
+    try
+    {
+        logger.LogInformation("Database ready: {Database} on MariaDB {ServerVersion}",
+            dbConnection.Database, dbConnection.ServerVersion);
+    }
+    finally
+    {
+        await db.Database.CloseConnectionAsync();
+    }
 
     var adminUser = builder.Configuration["Seed:AdminUsername"] ?? "admin";
     var adminPassword = builder.Configuration["Seed:AdminPassword"] ?? "Albaik@2026";
