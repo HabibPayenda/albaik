@@ -61,6 +61,18 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
     /// <summary>The connection string for <see cref="DatabaseName"/>.</summary>
     public string ConnectionString => _connectionString;
 
+    /// <summary>
+    /// Writes a file into the throwaway web root. Static-file tests use this to create
+    /// the hashed asset, image and PWA files a built front end would ship, without
+    /// depending on an actual SPA build.
+    /// </summary>
+    public void WriteWebRootFile(string relativePath, string content)
+    {
+        var path = Path.Combine(_webRoot, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
     private static string ConnectionBase =>
         Environment.GetEnvironmentVariable("ALBAIK_TEST_MYSQL") is { Length: > 0 } configured
             ? configured

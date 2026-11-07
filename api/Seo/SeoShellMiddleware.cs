@@ -38,12 +38,23 @@ public sealed class SeoShellMiddleware
             return;
         }
 
-        context.Response.StatusCode = page.StatusCode;
+        var etag = HtmlEtag.Compute(html);
+        context.Response.Headers.ETag = etag;
         context.Response.ContentType = "text/html; charset=utf-8";
         // The same directive is carried in both places a crawler looks: the robots meta
         // tag in the head and the X-Robots-Tag header. Indexable pages leave both empty.
         if (!string.IsNullOrWhiteSpace(page.Robots))
             context.Response.Headers["X-Robots-Tag"] = page.Robots;
+
+        // The cache policy is no-cache, so a returning browser always revalidates. When
+        // it does and the shell is unchanged, answer 304 and send no HTML again.
+        if (HtmlEtag.IsNotModified(context.Request, etag))
+        {
+            context.Response.StatusCode = StatusCodes.Status304NotModified;
+            return;
+        }
+
+        context.Response.StatusCode = page.StatusCode;
         if (HttpMethods.IsHead(context.Request.Method)) return;
         await context.Response.WriteAsync(html, context.RequestAborted);
     }
