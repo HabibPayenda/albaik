@@ -1,19 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchHome } from '@/store/homeSlice'
 import { SectionRenderer } from '@/components/home/SectionRenderer'
 import { PageLoader, ErrorState } from '@/components/ui/Feedback'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { homeHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 
 export function HomePage() {
   const dispatch = useAppDispatch()
   const { data, status, error } = useAppSelector((state) => state.home)
-  const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
 
-  useDocumentTitle(`${settings.siteName} — ${settings.tagline}`)
+  const head = useMemo(() => homeHead(site), [site])
+  useDocumentHead(head)
 
   useEffect(() => {
     if (status === 'idle') dispatch(fetchHome())

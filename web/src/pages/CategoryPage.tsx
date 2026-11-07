@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchCategory, fetchProducts } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { collectionHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { Container, PageHero, Section, SectionHeading } from '@/components/ui/Layout'
 import { ProductGrid, ResultsBar } from '@/components/ui/ProductGrid'
@@ -26,6 +27,7 @@ export function CategoryPage() {
   const { categorySlug = '' } = useParams()
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
   const category = useAppSelector((state) => state.catalog.category)
   const { products, productTotal, listStatus, categoryStatus, error } = useAppSelector(
@@ -33,10 +35,11 @@ export function CategoryPage() {
   )
   const [brandFilter, setBrandFilter] = useState('')
 
-  useDocumentTitle(
-    category ? `${category.name} — ${settings.siteName}` : `Collection — ${settings.siteName}`,
-    category?.description,
+  const head = useMemo(
+    () => (category ? collectionHead(site, category) : null),
+    [site, category],
   )
+  useDocumentHead(head)
 
   useEffect(() => {
     if (categorySlug) dispatch(fetchCategory(categorySlug))

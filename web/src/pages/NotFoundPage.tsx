@@ -1,8 +1,9 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppDispatch } from '@/store/hooks'
 import { toggleSearch } from '@/store/uiSlice'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { notFoundHead } from '@/lib/seo'
 import { ButtonLink } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { StatusPage } from '@/components/ui/StatusPage'
@@ -21,10 +22,11 @@ const QUICK_LINKS = [
 ]
 
 export function NotFoundPage() {
-  const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
   const dispatch = useAppDispatch()
-  useDocumentTitle(`${t('notFound.title')} — ${settings.siteName}`)
+  const head = useMemo(() => notFoundHead(site), [site])
+  useDocumentHead(head)
 
   return (
     <StatusPage

@@ -4,7 +4,8 @@ import { X } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchCategories, fetchProducts } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { collectionsHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { PageHero, Container, Section, SectionHeading } from '@/components/ui/Layout'
 import { ProductGrid, Pagination, ResultsBar } from '@/components/ui/ProductGrid'
@@ -24,6 +25,7 @@ import { plural } from '@/lib/utils'
 export function CollectionsPage() {
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
   const [params, setParams] = useSearchParams()
 
@@ -32,12 +34,16 @@ export function CollectionsPage() {
     (state) => state.catalog,
   )
 
-  useDocumentTitle(`${t('collections.title')} — ${settings.siteName}`)
-
   const category = params.get('category') ?? ''
   const brand = params.get('brand') ?? ''
   const search = params.get('search') ?? ''
   const page = Number(params.get('page') ?? 1)
+
+  const head = useMemo(
+    () => collectionsHead(site, categories, { category, brand, search, page }),
+    [site, categories, category, brand, search, page],
+  )
+  useDocumentHead(head)
 
   useEffect(() => {
     if (!categories.length) dispatch(fetchCategories(true))

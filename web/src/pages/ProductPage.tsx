@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchProduct, clearProduct } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { productHead } from '@/lib/seo'
 import { Container, Section, SectionHeading } from '@/components/ui/Layout'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
 import { ProductImage } from '@/components/ui/ProductImage'
@@ -49,6 +50,7 @@ export function ProductPage() {
   const { productSlug = '' } = useParams()
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { product, detailStatus, error } = useAppSelector((state) => state.catalog)
   const [activeImage, setActiveImage] = useState(0)
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('benefits')
@@ -60,10 +62,8 @@ export function ProductPage() {
     [settings],
   )
 
-  useDocumentTitle(
-    product ? `${product.name} — Albaik` : `Product — Albaik`,
-    product?.metaDescription?.trim() || product?.shortDescription,
-  )
+  const head = useMemo(() => (product ? productHead(site, product) : null), [site, product])
+  useDocumentHead(head)
 
   useEffect(() => {
     if (productSlug) dispatch(fetchProduct(productSlug))
