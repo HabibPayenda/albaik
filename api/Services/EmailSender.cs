@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Albaik.Api.Services;
 
-public record EmailResult(bool Delivered, string? Error);
+public record EmailResult(bool Delivered, string? Error, string? MessageId = null);
 
 public interface IEmailSender
 {
@@ -203,6 +203,7 @@ public class SmtpEmailSender : IEmailSender
             if (!string.IsNullOrWhiteSpace(replyTo) && MailboxAddress.TryParse(replyTo, out var replyAddress))
                 message.ReplyTo.Add(replyAddress);
             message.Subject = subject;
+            message.MessageId = MimeKit.Utils.MimeUtils.GenerateMessageId();
 
             /*
              * Always send both parts. Setting HtmlBody alone produces a `text/html`-only
@@ -220,7 +221,7 @@ public class SmtpEmailSender : IEmailSender
             await _transport.SendAsync(message, ct);
 
             _log.LogInformation("Delivered \"{Subject}\" to {To}.", subject, to);
-            return new EmailResult(true, null);
+            return new EmailResult(true, null, message.MessageId);
         }
         catch (Exception ex)
         {

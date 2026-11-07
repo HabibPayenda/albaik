@@ -191,6 +191,8 @@ public class ContactMessageReply
     public string FromAddress { get; set; } = "";
     public string ToAddress { get; set; } = "";
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
-    /// <summary>"dashboard" today; reserved for a future mailbox sync.</summary>
+    /// <summary>"dashboard" for the composer, "phone" for a mailbox-synced reply.</summary>
     public string Source { get; set; } = "dashboard";
+    /// <summary>The RFC Message-Id, used to avoid importing the same sent mail twice.</summary>
+    public string? MessageId { get; set; }
 }

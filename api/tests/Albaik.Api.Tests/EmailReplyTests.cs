@@ -96,6 +96,14 @@ public class EmailReplyTests
         Assert.Contains("Original question about wholesale pricing.", Html(sent), StringComparison.Ordinal);
         AssertBranded(sent, "Albaik Group of Companies");
 
+        // If the mailbox's Sent folder later contains this same dashboard reply, the
+        // phone sync must recognise its Message-Id and not duplicate it.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var importer = scope.ServiceProvider.GetRequiredService<MailboxReplyImporter>();
+            Assert.False(await importer.ImportAsync(sent));
+        }
+
         var replies = await admin.GetFromJsonAsync<List<ContactMessageReplyDto>>(
             $"/api/admin/messages/{message.Id}/replies");
         var sentReply = Assert.Single(replies!);
