@@ -83,6 +83,7 @@ public class SqliteImportTests
                 Assert.Equal(new[] { "Helps reduce dandruff", "Cleanses the scalp" }, product.Benefits);
                 Assert.Equal(new[] { "Anti-Dandruff", "Scalp Care" }, product.Ingredients);
                 Assert.Equal("6291104123456", product.Ibn);
+                Assert.Equal("Imported search snippet", product.MetaDescription);
                 Assert.Equal("GGK69TAE7FPN96ZR", product.VerificationCode);
                 Assert.Equal("2026-10-31 13:53:41.161137", Format(product.UpdatedAt));
 

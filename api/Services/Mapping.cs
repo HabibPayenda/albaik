@@ -30,6 +30,7 @@ public static class Mapping
 
     public static ProductDetailDto ToDetail(this Product p, List<ProductCardDto> related) => new(
         p.Id, p.Slug, p.Name, p.Subtitle, p.FormulationLabel, p.ShortDescription, p.Description,
+        p.MetaDescription,
         p.Size, p.Price, p.CompareAtPrice, p.Currency, p.PriceNote,
         p.Rating, p.ReviewCount, p.Badge, p.BadgeStyle, p.StockStatus,
         p.ImageUrl, p.AccentFrom, p.AccentTo, p.Benefits, p.Ingredients,

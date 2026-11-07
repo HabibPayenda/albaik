@@ -28,7 +28,7 @@ public record ProductCardDto(
 
 public record ProductDetailDto(
     int Id, string Slug, string Name, string? Subtitle, string? FormulationLabel,
-    string? ShortDescription, string? Description, string? Size,
+    string? ShortDescription, string? Description, string? MetaDescription, string? Size,
     decimal? Price, decimal? CompareAtPrice, string Currency, string? PriceNote,
     double? Rating, int ReviewCount, string? Badge, string? BadgeStyle, string? StockStatus,
     string? ImageUrl, string? AccentFrom, string? AccentTo,
@@ -149,6 +149,7 @@ public class ProductInput
     public string? FormulationLabel { get; set; }
     public string? ShortDescription { get; set; }
     public string? Description { get; set; }
+    public string? MetaDescription { get; set; }
     public string? Size { get; set; }
     public decimal? Price { get; set; }
     public decimal? CompareAtPrice { get; set; }

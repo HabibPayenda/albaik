@@ -61,8 +61,8 @@ export function ProductPage() {
   const activeTab = tabs.find((entry) => entry.key === tab)!
 
   useDocumentTitle(
-    product ? `${product.name} — ${settings.siteName}` : `Product — ${settings.siteName}`,
-    product?.shortDescription,
+    product ? `${product.name} — Albaik` : `Product — Albaik`,
+    product?.metaDescription?.trim() || product?.shortDescription,
   )
 
   useEffect(() => {

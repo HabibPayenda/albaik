@@ -85,6 +85,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Subtitle).HasMaxLength(300);
             e.Property(x => x.FormulationLabel).HasMaxLength(200);
             e.Property(x => x.ShortDescription).HasMaxLength(1000);
+            e.Property(x => x.MetaDescription).HasMaxLength(Product.MetaDescriptionMaxLength);
             e.Property(x => x.Size).HasMaxLength(100);
             e.Property(x => x.Currency).HasMaxLength(10);
             e.Property(x => x.PriceNote).HasMaxLength(300);

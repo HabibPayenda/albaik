@@ -642,6 +642,10 @@ namespace Albaik.Api.Migrations
                     b.Property<bool>("IsFeatured")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("MetaDescription")
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)

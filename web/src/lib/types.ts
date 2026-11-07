@@ -50,6 +50,8 @@ export interface VerifyProduct {
 
 export interface ProductDetail extends Omit<ProductCard, 'benefits'> {
   description?: string
+  /** Staff-written search snippet; falls back to the short description when empty. */
+  metaDescription?: string
   priceNote?: string
   benefits: string[]
   howToUse?: string
@@ -293,6 +295,7 @@ export interface ProductInput {
   formulationLabel?: string
   shortDescription?: string
   description?: string
+  metaDescription?: string
   size?: string
   price?: number | null
   compareAtPrice?: number | null

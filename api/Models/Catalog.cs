@@ -62,6 +62,15 @@ public class Product
     public string? ShortDescription { get; set; }
     public string? Description { get; set; }
 
+    /// <summary>The most characters a staff-written search snippet may carry.</summary>
+    public const int MetaDescriptionMaxLength = 320;
+
+    /// <summary>
+    /// An optional search-engine snippet written by staff. It does not replace the short
+    /// description; the shell falls back to that when this is empty.
+    /// </summary>
+    public string? MetaDescription { get; set; }
+
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
     public int BrandId { get; set; }
