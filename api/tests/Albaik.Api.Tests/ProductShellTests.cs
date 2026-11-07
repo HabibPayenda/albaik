@@ -144,6 +144,88 @@ public class ProductShellTests : IClassFixture<AlbaikApiFactory>
     }
 
     [Fact]
+    public async Task MetaDescription_RoundTripsThroughAdminApiAndDrivesTheProductShell()
+    {
+        using var admin = _factory.AdminClient();
+        using var site = _factory.CreateClient();
+
+        var product = await ProductAsync(admin);
+        const string meta =
+            "Albaik Anti-Dandruff Shampoo for dandruff-related scalp and hair care, with cleansing, freshness and softness for everyday use.";
+        Assert.InRange(meta.Length, 120, 160);
+
+        try
+        {
+            var response = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive, meta));
+            response.EnsureSuccessStatusCode();
+
+            var adminDetail = await admin.GetFromJsonAsync<ProductDetailDto>(
+                $"/api/admin/products/{product.Id}");
+            Assert.Equal(meta, adminDetail!.MetaDescription);
+
+            var publicDetail = await site.GetFromJsonAsync<ProductDetailDto>(
+                $"/api/catalog/products/{product.Slug}");
+            Assert.Equal(meta, publicDetail!.MetaDescription);
+
+            var html = await SeoShellTestHelpers.ReadHtmlAsync(
+                await site.GetAsync($"/products/{product.Slug}"));
+            Assert.Equal(
+                meta,
+                SeoShellTestHelpers.MetaContent(html, "name", "description"));
+        }
+        finally
+        {
+            var restore = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive));
+            restore.EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
+    public async Task MetaDescription_IsTrimmedEmptiedAndLengthValidated()
+    {
+        using var admin = _factory.AdminClient();
+        var product = await ProductAsync(admin);
+        const string meta =
+            "Albaik Anti-Dandruff Shampoo for dandruff-related scalp and hair care, with cleansing, freshness and softness for everyday use.";
+
+        try
+        {
+            var padded = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive, $"  {meta}  "));
+            padded.EnsureSuccessStatusCode();
+            var trimmed = await admin.GetFromJsonAsync<ProductDetailDto>(
+                $"/api/admin/products/{product.Id}");
+            Assert.Equal(meta, trimmed!.MetaDescription);
+
+            var blank = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive, "   "));
+            blank.EnsureSuccessStatusCode();
+            var cleared = await admin.GetFromJsonAsync<ProductDetailDto>(
+                $"/api/admin/products/{product.Id}");
+            Assert.Null(cleared!.MetaDescription);
+
+            var tooLong = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive, new string('x', 321)));
+            Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+            Assert.Contains("320", await tooLong.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            var restore = await admin.PutAsJsonAsync(
+                $"/api/admin/products/{product.Id}",
+                Input(product, product.Ibn, product.IsActive));
+            restore.EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task MissingProduct_ReturnsNotFoundNoindex()
     {
         using var client = _factory.CreateClient();
@@ -203,7 +285,8 @@ public class ProductShellTests : IClassFixture<AlbaikApiFactory>
         HttpClient admin, ProductDetailDto product, string? ibn, bool isActive)
         => admin.PutAsJsonAsync($"/api/admin/products/{product.Id}", Input(product, ibn, isActive));
 
-    private static ProductInput Input(ProductDetailDto d, string? ibn, bool isActive) => new()
+    private static ProductInput Input(
+        ProductDetailDto d, string? ibn, bool isActive, string? metaDescription = null) => new()
     {
         Name = d.Name,
         Slug = d.Slug,
@@ -213,6 +296,7 @@ public class ProductShellTests : IClassFixture<AlbaikApiFactory>
         FormulationLabel = d.FormulationLabel,
         ShortDescription = d.ShortDescription,
         Description = d.Description,
+        MetaDescription = metaDescription ?? d.MetaDescription,
         Size = d.Size,
         Price = d.Price,
         CompareAtPrice = d.CompareAtPrice,

@@ -103,12 +103,14 @@ public static class ProductPageShell
     }
 
     /// <summary>
-    /// The search snippet: currently the short description, padded or clamped to
-    /// 120-160 characters. Ticket 12 adds an editable meta-description field; when it
-    /// lands it should be preferred here and the field passed as the first part.
+    /// The search snippet: the staff-written meta description when there is one, otherwise
+    /// the existing short description. Either way it is composed to 120-160 characters, and
+    /// no copy is invented.
     /// </summary>
     private static string BuildDescription(Product product)
-        => SeoText.ComposeDescription(product.ShortDescription, product.Description);
+        => string.IsNullOrWhiteSpace(product.MetaDescription)
+            ? SeoText.ComposeDescription(product.ShortDescription, product.Description)
+            : SeoText.ComposeDescription(product.MetaDescription);
 
     private static string BuildContentHtml(Product product, string imageUrl)
     {

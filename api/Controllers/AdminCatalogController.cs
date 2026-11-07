@@ -523,6 +523,7 @@ public class AdminCatalogController : ControllerBase
         p.BrandId = i.BrandId;
         p.Subtitle = i.Subtitle; p.FormulationLabel = i.FormulationLabel;
         p.ShortDescription = i.ShortDescription; p.Description = i.Description;
+        p.MetaDescription = NullIfBlank(i.MetaDescription);
         p.Size = i.Size; p.Price = i.Price; p.CompareAtPrice = i.CompareAtPrice;
         p.Currency = string.IsNullOrWhiteSpace(i.Currency) ? "AFN" : i.Currency;
         p.PriceNote = i.PriceNote;
@@ -544,6 +545,13 @@ public class AdminCatalogController : ControllerBase
         var brand = await _db.Brands.FirstOrDefaultAsync(b => b.Id == i.BrandId);
         if (brand is null) return "Select a valid brand.";
         if (brand.CategoryId != i.CategoryId) return "The selected brand does not belong to the selected category.";
+
+        var metaDescription = i.MetaDescription?.Trim();
+        if (!string.IsNullOrEmpty(metaDescription) &&
+            metaDescription.Length > Models.Product.MetaDescriptionMaxLength)
+        {
+            return $"The meta description must be {Models.Product.MetaDescriptionMaxLength} characters or fewer.";
+        }
 
         // The IBN is a plain number with no format of its own, but two products sharing
         // one makes it useless for telling them apart — which is the whole reason it is

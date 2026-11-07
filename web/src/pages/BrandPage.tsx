@@ -43,7 +43,9 @@ export function BrandPage() {
   const categories = useAppSelector((state) => state.site.categories)
 
   useDocumentTitle(
-    brand ? `${brand.name} — ${settings.siteName}` : `Brand — ${settings.siteName}`,
+    brand
+      ? `${brand.name}${brand.categoryName ? ` ${brand.categoryName}` : ''} — Albaik`
+      : `Brand — Albaik`,
     brand?.description,
   )
 

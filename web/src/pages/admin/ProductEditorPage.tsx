@@ -27,6 +27,7 @@ const EMPTY: ProductInput = {
   formulationLabel: '',
   shortDescription: '',
   description: '',
+  metaDescription: '',
   size: '',
   price: null,
   compareAtPrice: null,
@@ -107,6 +108,7 @@ export default function ProductEditorPage() {
           formulationLabel: data.formulationLabel ?? '',
           shortDescription: data.shortDescription ?? '',
           description: data.description ?? '',
+          metaDescription: data.metaDescription ?? '',
           size: data.size ?? '',
           price: data.price ?? null,
           compareAtPrice: data.compareAtPrice ?? null,
@@ -541,6 +543,20 @@ export default function ProductEditorPage() {
                         rows={5}
                         value={form.description ?? ''}
                         onChange={(event) => set('description', event.target.value)}
+                      />
+                    </Field>
+
+                    <Field
+                      label="Meta description"
+                      htmlFor="p-meta"
+                      hint="The search snippet. Leave blank to use the short description. Up to 320 characters; 120–160 reads best."
+                    >
+                      <TextArea
+                        id="p-meta"
+                        rows={3}
+                        maxLength={320}
+                        value={form.metaDescription ?? ''}
+                        onChange={(event) => set('metaDescription', event.target.value)}
                       />
                     </Field>
 
