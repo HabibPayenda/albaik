@@ -150,7 +150,7 @@ public sealed class ImapReplySyncService : BackgroundService
         try
         {
             var since = DateTime.UtcNow.AddDays(-LookbackDays);
-            var uids = await folder.SearchAsync(SearchQuery.SentSince(since), ct);
+            var uids = await folder.SearchAsync(SearchQuery.DeliveredAfter(since), ct);
 
             // A busy mailbox still only needs the recent tail; the Message-Id import
             // guard makes a repeated poll harmless.
