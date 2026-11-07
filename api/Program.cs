@@ -84,6 +84,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Security headers on every response, and a path-aware cache policy for assets, HTML
+// and the crawl files (ticket 11). Registered early: OnStarting callbacks survive any
+// response the rest of the pipeline produces.
+app.UseMiddleware<ResponseHeadersMiddleware>();
+
 app.UseCors("spa");
 
 // The dashboard must never enter the index, including the SPA fallback HTML that serves
@@ -144,8 +149,20 @@ app.MapFallback(async context =>
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
     }
+    // The fallback HTML is read per request so its ETag reflects the current build.
+    // `no-cache` (set by the header middleware) means a browser always revalidates,
+    // and an unchanged file is answered with 304 instead of a second copy.
+    var html = await File.ReadAllTextAsync(indexPath, context.RequestAborted);
+    var etag = HtmlEtag.Compute(html);
     context.Response.ContentType = "text/html";
-    await context.Response.SendFileAsync(indexPath);
+    context.Response.Headers.ETag = etag;
+    if (HtmlEtag.IsNotModified(context.Request, etag))
+    {
+        context.Response.StatusCode = StatusCodes.Status304NotModified;
+        return;
+    }
+
+    await context.Response.WriteAsync(html, context.RequestAborted);
 });
 
 // ------------------------------------------------------------------ database + seed
