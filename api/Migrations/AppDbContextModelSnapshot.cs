@@ -225,6 +225,9 @@ namespace Albaik.Api.Migrations
                         .HasPrecision(6)
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("CustomerReplyCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("DeliveryError")
                         .HasColumnType("longtext");
 
@@ -247,6 +250,10 @@ namespace Albaik.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("LastCustomerReplyAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Message")
                         .IsRequired()

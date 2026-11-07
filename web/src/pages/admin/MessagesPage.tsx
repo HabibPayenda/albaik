@@ -264,6 +264,9 @@ export default function MessagesPage() {
                         <Chip accent="danger">Not emailed</Chip>
                       ) : null}
                       {message.replyCount > 0 ? <Chip accent="teal">Replied</Chip> : null}
+                      {message.customerReplyCount > 0 ? (
+                        <Chip accent="gold">Customer replied</Chip>
+                      ) : null}
                     </span>
                     <span className="truncate text-body-sm text-on-surface-variant">{message.message}</span>
                     <span className="text-label-sm text-on-surface-variant/70">
@@ -327,11 +330,18 @@ export default function MessagesPage() {
                   value: open.emailDelivered ? 'Delivered to your inbox' : 'Not delivered - see settings',
                 },
                 {
-                  label: 'Replies',
+                  label: 'Your replies',
                   value:
                     open.replyCount > 0
                       ? `${open.replyCount} - last ${formatDate(open.repliedAt!, true)}`
-                      : 'No replies yet',
+                      : 'None yet',
+                },
+                {
+                  label: 'Customer replies',
+                  value:
+                    open.customerReplyCount > 0
+                      ? `${open.customerReplyCount} - last ${formatDate(open.lastCustomerReplyAt!, true)}`
+                      : 'None yet',
                 },
               ].map((row) => (
                 <div key={row.label} className="flex flex-col rounded-xl bg-surface-container-low p-space-sm">
@@ -376,10 +386,12 @@ export default function MessagesPage() {
                       {reply.body}
                     </p>
                     <p className="mt-2 text-label-sm text-on-surface-variant/70">
-                      {reply.source === 'phone'
-                        ? 'Synchronised from your email app'
-                        : 'Sent from the dashboard'}{' '}
-                      to {reply.toAddress}
+                      {reply.source === 'customer'
+                        ? 'Received from the customer'
+                        : reply.source === 'phone'
+                          ? 'Synchronised from your email app'
+                          : 'Sent from the dashboard'}{' '}
+                      - {reply.toAddress}
                     </p>
                   </div>
                 ))

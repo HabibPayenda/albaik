@@ -234,6 +234,8 @@ export interface ContactMessage {
   createdAt: string
   repliedAt?: string | null
   replyCount: number
+  customerReplyCount: number
+  lastCustomerReplyAt?: string | null
 }
 
 export interface ContactMessageReply {

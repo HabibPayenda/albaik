@@ -74,7 +74,7 @@ public static class Mapping
     public static TrustPillarDto ToDto(this TrustPillar t) => new(t.Id, t.Icon, t.Title, t.Subtitle, t.Accent, t.SortOrder, t.IsActive);
     public static HairProfileDto ToDto(this HairProfile h) => new(h.Id, h.Key, h.Icon, h.Title, h.Badge, h.BadgeStyle, h.Description, h.MetricValue, h.MetricLabel, h.SortOrder, h.IsActive);
     public static PageDto ToDto(this Page p) => new(p.Id, p.Slug, p.Title, p.Subtitle, p.Eyebrow, p.ContentHtml, p.MetaDescription, p.SortOrder, p.IsPublished, p.UpdatedAt);
-    public static ContactMessageDto ToDto(this ContactMessage m) => new(m.Id, m.Name, m.Email, m.Phone, m.Company, m.Subject, m.Message, m.Kind, m.IsRead, m.EmailDelivered, m.DeliveryError, m.CreatedAt, m.RepliedAt, m.ReplyCount);
+    public static ContactMessageDto ToDto(this ContactMessage m) => new(m.Id, m.Name, m.Email, m.Phone, m.Company, m.Subject, m.Message, m.Kind, m.IsRead, m.EmailDelivered, m.DeliveryError, m.CreatedAt, m.RepliedAt, m.ReplyCount, m.CustomerReplyCount, m.LastCustomerReplyAt);
     public static ContactMessageReplyDto ToDto(this ContactMessageReply r) => new(r.Id, r.ContactMessageId, r.Subject, r.Body, r.FromAddress, r.ToAddress, r.SentAt, r.Source);
     public static AdminUserDto ToDto(this AdminUser u) => new(u.Id, u.Username, u.Email, u.DisplayName, u.Role, u.IsActive, u.LastLoginAt);
 }
