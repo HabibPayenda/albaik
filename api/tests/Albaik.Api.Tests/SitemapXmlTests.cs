@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Albaik.Api.Dtos;
-using Microsoft.AspNetCore.Hosting;
 using Xunit;
 
 namespace Albaik.Api.Tests;
@@ -149,11 +148,25 @@ public class SitemapXmlTests : IClassFixture<AlbaikApiFactory>
     [Fact]
     public async Task Sitemap_WithoutConfiguredOrigin_IsAnExplicitConfigurationErrorInProduction()
     {
-        using var factory = new ProductionFactory();
+        using var factory = AlbaikApiFactory.ForEnvironment("Production");
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync("/sitemap.xml");
 
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("site.publicBaseUrl", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PublicPage_WithoutConfiguredOrigin_IsAnExplicitConfigurationErrorInProduction()
+    {
+        using var factory = AlbaikApiFactory.ForEnvironment("Production");
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/");
+
+        // A shell must not put host-derived canonicals, Open Graph URLs or JSON-LD into
+        // the index. Development keeps its request-origin fallback.
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Contains("site.publicBaseUrl", await response.Content.ReadAsStringAsync());
     }
@@ -200,14 +213,4 @@ public class SitemapXmlTests : IClassFixture<AlbaikApiFactory>
     }
 
     private sealed record ProductPage(List<ProductCardDto> Items, int Total);
-
-    /// <summary>The normal test host, but booted as Production to exercise the config guard.</summary>
-    private sealed class ProductionFactory : AlbaikApiFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.UseEnvironment("Production");
-        }
-    }
 }

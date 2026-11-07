@@ -7,12 +7,22 @@ namespace Albaik.Api.Services;
 
 public static class Slug
 {
+    // The column is varchar(200); leave room for the "-2".."-499" uniqueness suffix so
+    // a long name can never push the final slug past the column width.
+    private const int MaxLength = 200;
+    private const int UniquenessReserve = 5;
+
     public static string From(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return Guid.NewGuid().ToString("N")[..8];
         var s = value.Trim().ToLowerInvariant();
         s = Regex.Replace(s, @"[^a-z0-9\u0600-\u06FF]+", "-");
         s = s.Trim('-');
+        if (string.IsNullOrEmpty(s)) return Guid.NewGuid().ToString("N")[..8];
+
+        if (s.Length > MaxLength - UniquenessReserve)
+            s = s[..(MaxLength - UniquenessReserve)].TrimEnd('-');
+
         return string.IsNullOrEmpty(s) ? Guid.NewGuid().ToString("N")[..8] : s;
     }
 }

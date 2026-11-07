@@ -127,7 +127,8 @@ export function VerifyPage() {
         aria-live="polite"
         className="mx-auto flex w-full max-w-md items-center gap-space-sm rounded-2xl border border-white/20 bg-white/10 p-space-sm text-left backdrop-blur-md"
       >
-        <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-white/10">
+        {/* The Product frame is 4:5 on every surface, including this confirmation thumb. */}
+        <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-xl bg-white/10">
           <ProductImage src={product.imageUrl} alt={product.name} name={product.name} className="size-full" />
         </div>
         <div className="min-w-0">

@@ -5,6 +5,7 @@ using Albaik.Api.Data;
 using Albaik.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Albaik.Importer;
 
@@ -83,7 +84,7 @@ public static class SqliteToMariaDbImporter
         log?.Invoke($"Source read: {totalRows} rows across {source.Count} tables.");
 
         await EnsureTargetIsReadyAsync(db, source, options.Force, log, cancellationToken);
-        await InsertAsync(db, source, log, cancellationToken);
+        await InsertAsync(db, source, options.Force, log, cancellationToken);
         var tableReports = await VerifyTablesAsync(db, source, log, cancellationToken);
         var verificationCodesChecked = await VerifyVerificationCodesAsync(db, source, cancellationToken);
 
@@ -193,23 +194,31 @@ public static class SqliteToMariaDbImporter
             var summary = string.Join(", ", nonEmpty.Select(entry => $"{entry.Table}={entry.Count}"));
             throw new ImportRefusedException(
                 $"The target database '{database}' is not empty ({summary}). "
-                + "Re-run with --force to truncate the imported tables and replace their content.");
+                + "Re-run with --force to replace the imported tables' content.");
         }
 
         log?.Invoke(
-            "The target is not empty; truncating the imported tables because --force was supplied: "
+            "The target is not empty; its imported tables will be replaced inside the insert "
+            + "transaction because --force was supplied: "
             + string.Join(", ", nonEmpty.Select(entry => entry.Table)) + ".");
-
-        await TruncateAsync(db, source.Select(table => table.TableName).ToArray(), cancellationToken);
     }
 
     private static async Task InsertAsync(
         ImportDbContext db,
         IReadOnlyList<SourceTable> source,
+        bool replaceExisting,
         Action<string>? log,
         CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // DELETE is transactional where TRUNCATE is not (MariaDB implicitly commits it).
+        // Running the clear-out inside this transaction is what lets a failed forced retry
+        // roll back to the previous content instead of leaving the target empty.
+        if (replaceExisting)
+        {
+            await DeleteAllAsync(db, source, cancellationToken);
+        }
 
         foreach (var table in source)
         {
@@ -307,46 +316,42 @@ public static class SqliteToMariaDbImporter
         }
     }
 
-    private static async Task TruncateAsync(
+    private static async Task DeleteAllAsync(
         ImportDbContext db,
-        IReadOnlyList<string> tableNames,
+        IReadOnlyList<SourceTable> source,
         CancellationToken cancellationToken)
     {
-        await db.Database.OpenConnectionAsync(cancellationToken);
+        var connection = db.Database.GetDbConnection();
+        var transaction = db.Database.CurrentTransaction?.GetDbTransaction();
+
+        // Parent rows cannot be deleted while a child still references them. The switch
+        // is session-scoped and always restored before any INSERT runs.
+        await ExecuteAsync(connection, transaction, "SET FOREIGN_KEY_CHECKS=0", cancellationToken);
         try
         {
-            var connection = db.Database.GetDbConnection();
-
-            // MariaDB refuses to TRUNCATE a parent table while a foreign key still
-            // references it. The switch is session-scoped and always restored.
-            await ExecuteAsync(connection, "SET FOREIGN_KEY_CHECKS=0", cancellationToken);
-            try
+            for (var index = source.Count - 1; index >= 0; index--)
             {
-                for (var index = tableNames.Count - 1; index >= 0; index--)
-                {
-                    await ExecuteAsync(
-                        connection,
-                        $"TRUNCATE TABLE {Quote(tableNames[index])}",
-                        cancellationToken);
-                }
-            }
-            finally
-            {
-                await ExecuteAsync(connection, "SET FOREIGN_KEY_CHECKS=1", cancellationToken);
+                await ExecuteAsync(
+                    connection,
+                    transaction,
+                    $"DELETE FROM {Quote(source[index].TableName)}",
+                    cancellationToken);
             }
         }
         finally
         {
-            await db.Database.CloseConnectionAsync();
+            await ExecuteAsync(connection, transaction, "SET FOREIGN_KEY_CHECKS=1", cancellationToken);
         }
     }
 
     private static async Task ExecuteAsync(
         DbConnection connection,
+        DbTransaction? transaction,
         string sql,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

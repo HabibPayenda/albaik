@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchCategory, fetchProducts } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
-import { collectionHead } from '@/lib/seo'
+import { collectionHead, notFoundHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { Container, PageHero, Section, SectionHeading } from '@/components/ui/Layout'
 import { ProductGrid, ResultsBar } from '@/components/ui/ProductGrid'
@@ -35,10 +35,13 @@ export function CategoryPage() {
   )
   const [brandFilter, setBrandFilter] = useState('')
 
-  const head = useMemo(
-    () => (category ? collectionHead(site, category) : null),
-    [site, category],
-  )
+  const head = useMemo(() => {
+    if (category) return collectionHead(site, category)
+    // A collection that failed or does not exist gets the noindex 404 head rather than
+    // keeping the canonical of the page the visitor came from.
+    if (categoryStatus === 'error') return notFoundHead(site)
+    return null
+  }, [site, category, categoryStatus])
   useDocumentHead(head)
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
@@ -54,6 +55,20 @@ public class CacheAndSecurityHeaderTests : IClassFixture<AlbaikApiFactory>
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal(ImageCache, CacheControl(response));
         }
+    }
+
+    [Fact]
+    public async Task ProductPageHtml_IsRevalidatedNotCachedAsAnImage()
+    {
+        using var client = _factory.CreateClient();
+        var listing = await client.GetFromJsonAsync<ProductPage>("/api/catalog/products?pageSize=1");
+        Assert.NotNull(listing);
+        Assert.NotEmpty(listing!.Items);
+
+        var response = await client.GetAsync($"/products/{listing.Items[0].Slug}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(NoCache, CacheControl(response));
     }
 
     [Fact]
@@ -143,6 +158,10 @@ public class CacheAndSecurityHeaderTests : IClassFixture<AlbaikApiFactory>
             Assert.NotNull(response.Headers.ETag);
         }
     }
+
+    private sealed record ProductCard(string Slug);
+
+    private sealed record ProductPage(List<ProductCard> Items);
 
     private static string? CacheControl(HttpResponseMessage response)
         => response.Headers.TryGetValues("Cache-Control", out var values)

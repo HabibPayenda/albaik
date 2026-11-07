@@ -133,7 +133,7 @@ internal static class Program
               --source <path>     Copy of the live SQLite file. The original is never written.
               --target <conn>     MariaDB connection string. Defaults to ConnectionStrings__Default.
               --migrate           Apply the API's EF migrations before importing.
-              --force             Truncate the imported tables instead of refusing a non-empty target.
+              --force             Replace the imported tables' content instead of refusing a non-empty target.
               -h, --help          Show this help.
 
             Exit codes:

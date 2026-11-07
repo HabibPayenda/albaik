@@ -9,7 +9,7 @@ public sealed record ImportOptions
     /// <summary>MariaDB connection string. The schema must already exist unless <see cref="ApplyMigrations"/> is set.</summary>
     public required string TargetConnectionString { get; init; }
 
-    /// <summary>Truncate the target's imported tables instead of refusing a non-empty target.</summary>
+    /// <summary>Replace the target's imported tables' content instead of refusing a non-empty target.</summary>
     public bool Force { get; init; }
 
     /// <summary>Apply the API's EF migrations before importing, for a database that is still empty.</summary>

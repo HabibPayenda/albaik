@@ -1,4 +1,5 @@
 using Albaik.Api.Data;
+using Albaik.Api.Seo;
 using Microsoft.EntityFrameworkCore;
 
 namespace Albaik.Api.Services;
@@ -41,13 +42,30 @@ public static class CanonicalRedirects
         var isApi = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
         var isUploads = path.StartsWith("/uploads", StringComparison.OrdinalIgnoreCase);
 
+        // Static files, uploads, the dashboard and hashed build assets own their own
+        // casing and trailing-slash semantics. Folding `/assets/app-AbC123.js` to lower
+        // case would point at a file that does not exist, which breaks the SPA and its
+        // service-worker precache. Host and scheme corrections still apply below.
+        var normalisePath = !isApi
+            && !isUploads
+            && !Path.HasExtension(path)
+            && !path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWith("/brand/", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase);
+
         string? origin = null;
         string? brandPath = null;
+        string? contentPath = null;
         try
         {
             var db = context.RequestServices.GetRequiredService<AppDbContext>();
             origin = await PublicSiteUrl.ReadAsync(db, context.RequestAborted);
-            if (!isApi && !isUploads) brandPath = await ResolveBrandPathAsync(db, path, context.RequestAborted);
+            if (normalisePath)
+            {
+                brandPath = await ResolveBrandPathAsync(db, path, context.RequestAborted);
+                if (brandPath is null)
+                    contentPath = await ResolveContentPathAsync(db, path, context.RequestAborted);
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -64,7 +82,7 @@ public static class CanonicalRedirects
         var effectivePath = path;
         var pathChanged = false;
 
-        if (!isApi && !isUploads)
+        if (normalisePath)
         {
             var normalised = NormalizePath(path);
             if (!string.Equals(normalised, path, StringComparison.Ordinal))
@@ -73,9 +91,16 @@ public static class CanonicalRedirects
                 pathChanged = true;
             }
 
+            // A CMS page has one preferred address; the other routes it can be reached
+            // through are aliases and must redirect rather than index duplicate copies.
             if (brandPath is not null)
             {
                 effectivePath = brandPath;
+                pathChanged = true;
+            }
+            else if (contentPath is not null)
+            {
+                effectivePath = contentPath;
                 pathChanged = true;
             }
         }
@@ -144,6 +169,49 @@ public static class CanonicalRedirects
         return brand is null
             ? null
             : $"/collections/{brand.CollectionSlug.ToLowerInvariant()}/{brand.Slug.ToLowerInvariant()}";
+    }
+
+    /// <summary>
+    /// The preferred address for a CMS page when the requester used an alias
+    /// (`/pages/about` or `/guides/about` for the named `/about` page), or null when the
+    /// path is already preferred or does not name a published page. Looking the page up
+    /// in the database keeps an unknown alias a 404 rather than redirecting it to a page
+    /// that does not exist.
+    /// </summary>
+    private static async Task<string?> ResolveContentPathAsync(
+        AppDbContext db, string path, CancellationToken cancellationToken)
+    {
+        var normalised = NormalizePath(path);
+        if (normalised.Length <= 1) return null;
+
+        string? slug = null;
+        var candidate = normalised[1..];
+        if (!candidate.Contains('/') && ContentRoutes.IsNamed(candidate))
+        {
+            slug = candidate.ToLowerInvariant();
+        }
+        else
+        {
+            foreach (var prefix in new[] { ContentRoutes.GuidesPrefix, ContentRoutes.PagesPrefix })
+            {
+                if (!normalised.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var remainder = normalised[prefix.Length..];
+                if (remainder.Length == 0 || remainder.Contains('/')) return null;
+                slug = Uri.UnescapeDataString(remainder).ToLowerInvariant();
+                break;
+            }
+        }
+
+        if (slug is null) return null;
+
+        var preferred = ContentRoutes.PreferredPath(slug);
+        if (string.Equals(preferred, normalised, StringComparison.Ordinal)) return null;
+
+        var exists = await db.Pages.AsNoTracking()
+            .AnyAsync(p => p.Slug == slug && p.IsPublished, cancellationToken);
+
+        return exists ? preferred : null;
     }
 
     private static string? FirstForwardedValue(HttpContext context, string header)

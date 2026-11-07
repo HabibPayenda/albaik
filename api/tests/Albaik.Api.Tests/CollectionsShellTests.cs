@@ -236,6 +236,17 @@ public class CollectionsShellTests : IClassFixture<AlbaikApiFactory>
             Assert.Contains($"/products/{product.Slug}", html, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task EnormousPageNumber_IsClampedInsteadOfOverflowing()
+    {
+        using var client = _factory.CreateClient();
+
+        var html = await ReadHtmlAsync(await client.GetAsync("/collections?page=200000000"));
+
+        Assert.Equal(CollectionsTitle, ElementText(html, "title"));
+        Assert.NotNull(Canonical(html));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static async Task<List<ProductCardDto>> ProductsAsync(HttpClient client, string query)

@@ -19,7 +19,14 @@ public class CanonicalRedirectTests : IClassFixture<AlbaikApiFactory>
     private const string CanonicalHost = "albaik-group.af";
 
     private readonly AlbaikApiFactory _factory;
-    public CanonicalRedirectTests(AlbaikApiFactory factory) => _factory = factory;
+
+    public CanonicalRedirectTests(AlbaikApiFactory factory)
+    {
+        _factory = factory;
+        // A built front end ships hashed, mixed-case filenames. Path normalisation must
+        // leave their casing alone.
+        _factory.WriteWebRootFile("assets/app-AbC123.js", "console.log('mixed case fixture');");
+    }
 
     [Fact]
     public async Task WwwHost_RedirectsToApex_PreservingPathAndQuery()
@@ -82,6 +89,17 @@ public class CanonicalRedirectTests : IClassFixture<AlbaikApiFactory>
         {
             await RestoreSettingAsync(admin, row);
         }
+    }
+
+    [Fact]
+    public async Task MixedCaseHashedAsset_IsServedInsteadOfLowercased()
+    {
+        using var client = PageClient();
+        var response = await client.GetAsync("/assets/app-AbC123.js");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+        Assert.Contains("mixed case fixture", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

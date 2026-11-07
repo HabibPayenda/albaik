@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchBrand } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
-import { brandHead } from '@/lib/seo'
+import { brandHead, notFoundHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { Container, PageHero, Section, SectionHeading } from '@/components/ui/Layout'
 import { ProductGrid, ResultsBar } from '@/components/ui/ProductGrid'
@@ -45,7 +45,12 @@ export function BrandPage() {
   const allBrands = useAppSelector((state) => state.site.brands)
   const categories = useAppSelector((state) => state.site.categories)
 
-  const head = useMemo(() => (brand ? brandHead(site, brand) : null), [site, brand])
+  const head = useMemo(() => {
+    if (brand) return brandHead(site, brand)
+    // A failed/missing brand must not keep the previous route's canonical in the head.
+    if (brandStatus === 'error') return notFoundHead(site)
+    return null
+  }, [site, brand, brandStatus])
   useDocumentHead(head)
 
   useEffect(() => {

@@ -25,7 +25,6 @@ public static class ContentPageShell
         AppDbContext db,
         SiteSettingsSnapshot site,
         string slug,
-        string canonicalPath,
         bool isGuide,
         CancellationToken ct)
     {
@@ -34,6 +33,10 @@ public static class ContentPageShell
 
         if (page is null) return null;
 
+        // The preferred route is the one canonical address for this page. Aliases are
+        // 301ed by CanonicalRedirects before they reach the shell, so a page can never
+        // be indexed under `/pages/about`, `/guides/about` and `/about` at once.
+        var canonicalPath = ContentRoutes.PreferredPath(page.Slug);
         var canonicalUrl = SeoUrl.Absolute(site.BaseUrl, canonicalPath);
         var description = SeoText.ComposeDescription(
             string.IsNullOrWhiteSpace(page.MetaDescription) ? page.Subtitle : page.MetaDescription);

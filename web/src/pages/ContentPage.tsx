@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { api, endpoints, errorMessage } from '@/lib/api'
 import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
-import { contentHead } from '@/lib/seo'
+import { contentHead, notFoundHead } from '@/lib/seo'
 import { Container, PageHero } from '@/components/ui/Layout'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
@@ -28,10 +28,12 @@ export function ContentPage({ slugOverride }: { slugOverride?: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string>()
 
-  const head = useMemo(
-    () => (page ? contentHead(site, page, location.pathname) : null),
-    [site, page, location.pathname],
-  )
+  const head = useMemo(() => {
+    if (page) return contentHead(site, page, location.pathname)
+    // A failed/missing page must not leave the previous route's canonical behind.
+    if (status === 'error') return notFoundHead(site)
+    return null
+  }, [site, page, location.pathname, status])
   useDocumentHead(head)
 
   useEffect(() => {

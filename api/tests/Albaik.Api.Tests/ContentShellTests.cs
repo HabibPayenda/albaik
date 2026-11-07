@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Albaik.Api.Dtos;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 using static Albaik.Api.Tests.SeoTestHelpers;
 
@@ -87,17 +88,55 @@ public class ContentShellTests : IClassFixture<AlbaikApiFactory>
     }
 
     [Fact]
-    public async Task GenericPagesRoute_ReturnsTheSamePageWithItsOwnCanonical()
+    public async Task AliasRoutes_RedirectToThePreferredContentPath()
     {
-        using var client = _factory.CreateClient();
-        var page = await client.GetFromJsonAsync<PageDto>("/api/pages/about");
+        // A named page lives at `/about`; `/pages/about` and `/guides/about` are aliases
+        // that must not be indexed as separate copies.
+        using var client = _factory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        foreach (var alias in new[] { "/pages/about", "/guides/about" })
+        {
+            var response = await client.GetAsync(alias);
+
+            Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+            Assert.Equal("http://localhost/about", response.Headers.Location?.ToString());
+        }
+    }
+
+    [Fact]
+    public async Task GenericPageRoute_ReturnsThePageAtItsPreferredCanonical()
+    {
+        using var admin = _factory.AdminClient();
+        var slug = $"review-{Guid.NewGuid():N}";
+        var created = await admin.PostAsJsonAsync("/api/admin/pages", new PageInput
+        {
+            Slug = slug,
+            Title = "Generic Review Page",
+            Subtitle = "A page that is neither named nor a guide.",
+            ContentHtml = "<p>Generic page body.</p>",
+            MetaDescription = "A generic review page used to pin the preferred /pages route.",
+            SortOrder = 99,
+            IsPublished = true,
+        });
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var page = await created.Content.ReadFromJsonAsync<PageDto>();
         Assert.NotNull(page);
 
-        var html = await ReadHtmlAsync(await client.GetAsync("/pages/about"));
+        try
+        {
+            using var client = _factory.CreateClient();
+            var html = await ReadHtmlAsync(await client.GetAsync($"/pages/{page!.Slug}"));
 
-        Assert.Equal($"{page!.Title} — Albaik", ElementText(html, "title"));
-        Assert.Equal("http://localhost/pages/about", Canonical(html));
-        Assert.True(ContainsHtmlText(html, page.Title));
+            Assert.Equal($"{page.Title} — Albaik", ElementText(html, "title"));
+            Assert.Equal($"http://localhost/pages/{page.Slug}", Canonical(html));
+            Assert.True(ContainsHtmlText(html, page.Title));
+        }
+        finally
+        {
+            var deleted = await admin.DeleteAsync($"/api/admin/pages/{page!.Id}");
+            Assert.Equal(HttpStatusCode.OK, deleted.StatusCode);
+        }
     }
 
     [Fact]

@@ -39,16 +39,20 @@ public static class CollectionsIndexShell
         var categorySlug = Read(request, "category");
         var brandSlug = Read(request, "brand");
         var search = Read(request, "search");
-        var page = ReadPage(request);
 
         var activeCategory = categorySlug.Length == 0
             ? null
             : categories.FirstOrDefault(c =>
                 string.Equals(c.Slug, categorySlug, StringComparison.OrdinalIgnoreCase));
 
-        var products = await QueryProductsAsync(db, categorySlug, brandSlug, search, page, ct);
+        // Count before paging: a `page` near int.MaxValue would otherwise overflow the
+        // Skip expression and turn a crawlable URL into a 500. Clamping to the last page
+        // also keeps the canonical and the rendered page consistent.
         var total = await CountProductsAsync(db, categorySlug, brandSlug, search, ct);
         var totalPages = (total + PageSize - 1) / PageSize;
+        var page = Math.Clamp(ReadPage(request), 1, Math.Max(totalPages, 1));
+
+        var products = await QueryProductsAsync(db, categorySlug, brandSlug, search, page, ct);
 
         var hasSearch = search.Length > 0;
         var hasBrand = brandSlug.Length > 0;
