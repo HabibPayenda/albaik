@@ -117,6 +117,7 @@ export const endpoints = {
     emailStatus: '/admin/email-status',
     messages: '/admin/messages',
     messageRead: (id: number) => `/admin/messages/${id}/read`,
+    messageReply: (id: number) => `/admin/messages/${id}/reply`,
     message: (id: number) => `/admin/messages/${id}`,
   },
 }

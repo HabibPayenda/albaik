@@ -82,7 +82,8 @@ public record HairProfileDto(int Id, string Key, string Icon, string Title, stri
 public record PageDto(int Id, string Slug, string Title, string? Subtitle, string? Eyebrow, string? ContentHtml,
     string? MetaDescription, int SortOrder, bool IsPublished, DateTime UpdatedAt);
 public record ContactMessageDto(int Id, string Name, string Email, string? Phone, string? Company, string? Subject,
-    string Message, string Kind, bool IsRead, bool EmailDelivered, string? DeliveryError, DateTime CreatedAt);
+    string Message, string Kind, bool IsRead, bool EmailDelivered, string? DeliveryError, DateTime CreatedAt,
+    DateTime? RepliedAt, int ReplyCount);
 public record AdminUserDto(int Id, string Username, string? Email, string? DisplayName, string Role, bool IsActive, DateTime? LastLoginAt);
 
 /// <summary>Everything the marketing shell needs in a single round trip.</summary>
@@ -346,6 +347,18 @@ public class ContactInput
     public string? ProductSlug { get; set; }
     /// <summary>Honeypot field. Real users never fill this in.</summary>
     public string? Website { get; set; }
+}
+
+/// <summary>A dashboard reply sent to the person who submitted an enquiry.</summary>
+public class ReplyMessageInput
+{
+    [Required]
+    [StringLength(200)]
+    public string Subject { get; set; } = "";
+
+    [Required]
+    [StringLength(8000)]
+    public string Body { get; set; } = "";
 }
 
 public class LoginInput

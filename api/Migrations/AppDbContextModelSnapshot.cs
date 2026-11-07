@@ -269,6 +269,13 @@ namespace Albaik.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<DateTime?>("RepliedAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ReplyCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("Subject")
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");

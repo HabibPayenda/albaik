@@ -1,7 +1,9 @@
+using Albaik.Api.Data;
 using Albaik.Api.Models;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using Microsoft.EntityFrameworkCore;
 
 namespace Albaik.Api.Services;
 
@@ -12,6 +14,47 @@ public interface IEmailSender
     bool IsConfigured { get; }
     Task<EmailResult> SendContactNotificationAsync(ContactMessage message, string siteName, CancellationToken ct = default);
     Task<EmailResult> SendAutoReplyAsync(ContactMessage message, string siteName, CancellationToken ct = default);
+    Task<EmailResult> SendReplyAsync(ContactMessage message, string subject, string body, string siteName, CancellationToken ct = default);
+}
+
+/// <summary>
+/// The transport seam. The real implementation talks to SMTP; tests replace it with a
+/// recording fake so the branded message and the reply workflow can be asserted without
+/// a network server.
+/// </summary>
+public interface IEmailTransport
+{
+    bool IsConfigured { get; }
+    Task SendAsync(MimeMessage message, CancellationToken ct);
+}
+
+public sealed class SmtpEmailTransport : IEmailTransport
+{
+    private readonly IConfiguration _config;
+
+    public SmtpEmailTransport(IConfiguration config) => _config = config;
+
+    private string? Host => _config["Smtp:Host"];
+    private int Port => int.TryParse(_config["Smtp:Port"], out var port) ? port : 587;
+    private string? User => _config["Smtp:Username"];
+    private string? Pass => _config["Smtp:Password"];
+    private bool UseStartTls => !bool.TryParse(_config["Smtp:UseStartTls"], out var startTls) || startTls;
+
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(Host);
+
+    public async Task SendAsync(MimeMessage message, CancellationToken ct)
+    {
+        using var client = new SmtpClient();
+        await client.ConnectAsync(
+            Host!,
+            Port,
+            UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto,
+            ct);
+        if (!string.IsNullOrWhiteSpace(User))
+            await client.AuthenticateAsync(User!, Pass ?? "", ct);
+        await client.SendAsync(message, ct);
+        await client.DisconnectAsync(true, ct);
+    }
 }
 
 /// <summary>
@@ -23,130 +66,128 @@ public interface IEmailSender
 /// </summary>
 public class SmtpEmailSender : IEmailSender
 {
+    private readonly IEmailTransport _transport;
+    private readonly AppDbContext _db;
     private readonly IConfiguration _config;
     private readonly ILogger<SmtpEmailSender> _log;
 
-    public SmtpEmailSender(IConfiguration config, ILogger<SmtpEmailSender> log)
+    private static readonly byte[] LogoBytes = LoadLogo();
+
+    public SmtpEmailSender(
+        IEmailTransport transport,
+        AppDbContext db,
+        IConfiguration config,
+        ILogger<SmtpEmailSender> log)
     {
+        _transport = transport;
+        _db = db;
         _config = config;
         _log = log;
     }
 
-    private string? Host => _config["Smtp:Host"];
-    private int Port => int.TryParse(_config["Smtp:Port"], out var p) ? p : 587;
-    private string? User => _config["Smtp:Username"];
-    private string? Pass => _config["Smtp:Password"];
-    private string FromAddress => _config["Smtp:FromAddress"] is { Length: > 0 } f ? f : User ?? "no-reply@albaik-group.com";
+    private string FromAddress => _config["Smtp:FromAddress"] is { Length: > 0 } from
+        ? from
+        : _config["Smtp:Username"] is { Length: > 0 } user
+            ? user
+            : "no-reply@albaik-group.com";
     private string FromName => _config["Smtp:FromName"] ?? "Albaik Group of Companies";
     private string? NotifyTo => _config["Smtp:NotifyAddress"];
-    private bool UseStartTls => !bool.TryParse(_config["Smtp:UseStartTls"], out var t) || t;
 
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(Host);
+    public bool IsConfigured => _transport.IsConfigured;
 
-    public Task<EmailResult> SendContactNotificationAsync(ContactMessage m, string siteName, CancellationToken ct = default)
+    public async Task<EmailResult> SendContactNotificationAsync(
+        ContactMessage message, string siteName, CancellationToken ct = default)
     {
-        var to = NotifyTo ?? _config["Site:ContactEmail"];
+        var to = NotifyTo;
         if (string.IsNullOrWhiteSpace(to))
-            return Task.FromResult(new EmailResult(false, "No notification recipient configured (set Smtp:NotifyAddress)."));
+            return new EmailResult(false, "No notification recipient configured (set Smtp:NotifyAddress).");
 
-        var rows = new (string Label, string? Value)[]
-        {
-            ("Name", m.Name), ("Email", m.Email), ("Phone", m.Phone),
-            ("Company", m.Company), ("Subject", m.Subject), ("Type", m.Kind),
-            ("Product", m.ProductName),
-            ("Received", m.CreatedAt.ToString("u")),
-        };
+        var brand = await LoadBrandAsync(siteName, ct);
+        var content = EmailTemplate.ContactNotification(message, brand);
 
-        var present = rows.Where(r => !string.IsNullOrWhiteSpace(r.Value)).ToList();
+        var subject = string.IsNullOrWhiteSpace(message.ProductName)
+            ? $"[{siteName}] New {message.Kind} enquiry from {message.Name}"
+            : $"[{siteName}] {message.Kind} enquiry - {message.ProductName} - from {message.Name}";
 
-        var cells = string.Join("", present
-            .Select(r =>
-                "<tr>" +
-                "<td style=\"padding:8px 12px;background:#f2f4f7;border:1px solid #e6e8eb;font-size:13px;color:#444652;width:130px;\">" + Encode(r.Label) + "</td>" +
-                "<td style=\"padding:8px 12px;border:1px solid #e6e8eb;font-size:13px;color:#191c1e;\">" + Encode(r.Value) + "</td>" +
-                "</tr>"));
-
-        /*
-         * A product enquiry gets its own callout above the detail table. The whole point
-         * of the "Enquire about this product" button is that the team should not have to
-         * guess which of twenty formulations the visitor meant, so the product is the
-         * most prominent thing in the message rather than one grey row among seven.
-         */
-        var productBlock = string.IsNullOrWhiteSpace(m.ProductName)
-            ? ""
-            : "<div style=\"padding:14px 16px;border-left:3px solid #d4af37;background:#f7f9fc;margin-bottom:20px;\">" +
-              "<div style=\"font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#7d621b;font-weight:700;\">Product enquiry</div>" +
-              "<div style=\"font-family:Georgia,serif;font-size:17px;color:#050d24;font-weight:700;margin-top:3px;\">" + Encode(m.ProductName) + "</div>" +
-              (string.IsNullOrWhiteSpace(m.ProductSlug)
-                  ? ""
-                  : "<div style=\"font-size:12px;color:#747684;margin-top:3px;\">/products/" + Encode(m.ProductSlug) + "</div>") +
-              "</div>";
-
-        var html = Wrap(
-            "<h2 style=\"margin:0 0 4px;font-family:Georgia,serif;color:#050d24;\">New " + Encode(m.Kind) + " enquiry</h2>" +
-            "<p style=\"margin:0 0 20px;color:#444652;font-size:14px;\">Submitted via the " + Encode(siteName) + " website.</p>" +
-            productBlock +
-            "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:100%;border-collapse:collapse;margin-bottom:20px;\">" +
-            cells +
-            "</table>" +
-            "<div style=\"padding:16px;border-left:3px solid #0e3b9c;background:#f7f9fc;white-space:pre-wrap;font-size:14px;color:#191c1e;\">" +
-            Encode(m.Message) +
-            "</div>");
-
-        var text = Text(
-            "New " + m.Kind + " enquiry",
-            "Submitted via the " + siteName + " website.",
-            string.IsNullOrWhiteSpace(m.ProductName) ? "" : "Regarding product: " + m.ProductName,
-            string.Join(Environment.NewLine, present.Select(r => r.Label.PadRight(10) + r.Value)),
-            "Message",
-            m.Message);
-
-        var subject = string.IsNullOrWhiteSpace(m.ProductName)
-            ? "[" + siteName + "] New " + m.Kind + " enquiry from " + m.Name
-            : "[" + siteName + "] " + m.Kind + " enquiry — " + m.ProductName + " — from " + m.Name;
-
-        return SendAsync(to, subject, html, text, m.Email, ct);
+        return await SendAsync(to, Sanitise(subject), content, message.Email, ct);
     }
 
-    public Task<EmailResult> SendAutoReplyAsync(ContactMessage m, string siteName, CancellationToken ct = default)
+    public async Task<EmailResult> SendAutoReplyAsync(
+        ContactMessage message, string siteName, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(m.Email))
-            return Task.FromResult(new EmailResult(false, "Sender has no email address."));
+        if (string.IsNullOrWhiteSpace(message.Email))
+            return new EmailResult(false, "Sender has no email address.");
 
-        // Echo the product back, so the visitor can tell at a glance that the enquiry
-        // that reached the team is about the right formulation.
-        var about = string.IsNullOrWhiteSpace(m.ProductName)
-            ? ""
-            : "<p style=\"margin:0 0 14px;color:#191c1e;font-size:15px;line-height:1.6;\">" +
-              "Your enquiry is about <strong>" + Encode(m.ProductName) + "</strong>.</p>";
+        var brand = await LoadBrandAsync(siteName, ct);
+        var content = EmailTemplate.AutoReply(message, brand);
 
-        var html = Wrap(
-            "<h2 style=\"margin:0 0 12px;font-family:Georgia,serif;color:#050d24;\">Thank you, " + Encode(m.Name) + "</h2>" +
-            "<p style=\"margin:0 0 14px;color:#191c1e;font-size:15px;line-height:1.6;\">We have received your message and a member of the Albaik Group team will respond shortly.</p>" +
-            about +
-            "<p style=\"margin:0 0 20px;color:#444652;font-size:14px;line-height:1.6;\">For urgent wholesale or distribution matters you can also reach us on WhatsApp using the number published on our website.</p>" +
-            "<div style=\"padding:16px;border-left:3px solid #d4af37;background:#f7f9fc;white-space:pre-wrap;font-size:14px;color:#444652;\">" +
-            Encode(m.Message) +
-            "</div>" +
-            "<p style=\"margin:24px 0 0;font-size:13px;color:#747684;\">&mdash; " + Encode(siteName) + " &middot; The Mark of Pure Perfection</p>");
-
-        var text = Text(
-            "Thank you, " + m.Name,
-            "We have received your message and a member of the Albaik Group team will respond shortly.",
-            string.IsNullOrWhiteSpace(m.ProductName) ? "" : "Your enquiry is about " + m.ProductName + ".",
-            "For urgent wholesale or distribution matters you can also reach us on WhatsApp using the number published on our website.",
-            "Your message",
-            m.Message);
-
-        return SendAsync(m.Email, "We received your message — " + siteName, html, text, NotifyTo, ct);
+        return await SendAsync(
+            message.Email,
+            Sanitise($"We received your message - {siteName}"),
+            content,
+            NotifyTo,
+            ct);
     }
 
-    private async Task<EmailResult> SendAsync(string to, string subject, string html, string text, string? replyTo, CancellationToken ct)
+    public async Task<EmailResult> SendReplyAsync(
+        ContactMessage message, string subject, string body, string siteName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(message.Email))
+            return new EmailResult(false, "Sender has no email address.");
+
+        var brand = await LoadBrandAsync(siteName, ct);
+        var content = EmailTemplate.AdminReply(message, subject, body, brand);
+
+        return await SendAsync(message.Email, Sanitise(subject), content, NotifyTo, ct);
+    }
+
+    private async Task<EmailBrand> LoadBrandAsync(string fallbackName, CancellationToken ct)
+    {
+        var settings = await _db.SiteSettings.AsNoTracking()
+            .Select(setting => new { setting.Key, setting.Value })
+            .ToDictionaryAsync(setting => setting.Key, setting => setting.Value, ct);
+
+        string Value(string key, string fallback = "")
+        {
+            var value = settings.TryGetValue(key, out var stored) ? stored : null;
+            return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+        }
+
+        var social = new (string Key, string Label)[]
+        {
+            ("social.facebook", "Facebook"),
+            ("social.instagram", "Instagram"),
+            ("social.tiktok", "TikTok"),
+            ("social.linkedin", "LinkedIn"),
+        }
+        .Select(item => (item.Label, Url: Value(item.Key)))
+        .Where(item => item.Url.Length > 0)
+        .Select(item => (item.Label, item.Url))
+        .ToList();
+
+        return new EmailBrand(
+            Value("site.name", fallbackName),
+            Value("site.tagline", "The Mark of Pure Perfection"),
+            PublicSiteUrl.Normalize(settings.GetValueOrDefault("site.publicBaseUrl")),
+            Blank(Value("contact.email")),
+            Blank(Value("contact.phone")),
+            Blank(Value("contact.address")),
+            social);
+    }
+
+    private async Task<EmailResult> SendAsync(
+        string to,
+        string subject,
+        EmailContent content,
+        string? replyTo,
+        CancellationToken ct)
     {
         if (!IsConfigured)
         {
-            _log.LogInformation("SMTP not configured — skipping delivery of \"{Subject}\" to {To}.", subject, to);
-            return new EmailResult(false, "SMTP is not configured; the message is stored in the dashboard inbox only.");
+            _log.LogInformation("SMTP not configured - skipping delivery of \"{Subject}\" to {To}.", subject, to);
+            return new EmailResult(
+                false,
+                "SMTP is not configured; the message is stored in the dashboard inbox only.");
         }
 
         try
@@ -154,24 +195,33 @@ public class SmtpEmailSender : IEmailSender
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(FromName, FromAddress));
             message.To.Add(MailboxAddress.Parse(to));
-            if (!string.IsNullOrWhiteSpace(replyTo) && MailboxAddress.TryParse(replyTo, out var rt))
-                message.ReplyTo.Add(rt);
+            if (!string.IsNullOrWhiteSpace(replyTo) && MailboxAddress.TryParse(replyTo, out var replyAddress))
+                message.ReplyTo.Add(replyAddress);
             message.Subject = subject;
 
             /*
              * Always send both parts. Setting HtmlBody alone produces a `text/html`-only
              * message, which text-only clients cannot read at all and spam filters score
-             * worse — and a notification that lands in the junk folder is the same as one
+             * worse - and a notification that lands in the junk folder is the same as one
              * that never arrived. MailKit emits multipart/alternative when both are set.
              */
-            message.Body = new BodyBuilder { HtmlBody = html, TextBody = text }.ToMessageBody();
+            var builder = new BodyBuilder
+            {
+                HtmlBody = content.Html,
+                TextBody = content.Text,
+            };
 
-            using var client = new SmtpClient();
-            await client.ConnectAsync(Host!, Port, UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto, ct);
-            if (!string.IsNullOrWhiteSpace(User))
-                await client.AuthenticateAsync(User!, Pass ?? "", ct);
-            await client.SendAsync(message, ct);
-            await client.DisconnectAsync(true, ct);
+            // The logo travels inside the message, so it renders even when the recipient
+            // has not allowed remote images or the website is temporarily unreachable.
+            if (LogoBytes.Length > 0)
+            {
+                var logo = builder.LinkedResources.Add(
+                    "albaik-logo.png", LogoBytes, new ContentType("image", "png"));
+                logo.ContentId = EmailTemplate.LogoContentId;
+            }
+
+            message.Body = builder.ToMessageBody();
+            await _transport.SendAsync(message, ct);
 
             _log.LogInformation("Delivered \"{Subject}\" to {To}.", subject, to);
             return new EmailResult(true, null);
@@ -183,32 +233,23 @@ public class SmtpEmailSender : IEmailSender
         }
     }
 
-    private static string Encode(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");
+    private static string Sanitise(string subject) =>
+        subject.Replace('\r', ' ').Replace('\n', ' ').Trim();
 
-    /// <summary>
-    /// The plain-text alternative to <see cref="Wrap"/>. Blocks are separated by a blank
-    /// line, which is how a text reader expresses the paragraph and section spacing the
-    /// HTML version gets from styling.
-    /// </summary>
-    private static string Text(params string[] blocks) =>
-        string.Join(
-            Environment.NewLine + Environment.NewLine,
-            blocks.Where(b => !string.IsNullOrWhiteSpace(b))) +
-        Environment.NewLine + Environment.NewLine +
-        "-- " + Environment.NewLine +
-        "Albaik Group of Companies - The Mark of Pure Perfection";
+    private static string? Blank(string value) => value.Length == 0 ? null : value;
 
-    private static string Wrap(string inner) =>
-        "<!doctype html><html><body style=\"margin:0;padding:0;background:#eceef1;\">" +
-        "<div style=\"max-width:620px;margin:0 auto;padding:32px 16px;\">" +
-        "<div style=\"background:#0e3b9c;background-image:linear-gradient(135deg,#050d24 0%,#0e3b9c 60%,#1a4fcf 100%);padding:24px 28px;border-radius:16px 16px 0 0;\">" +
-        "<div style=\"font-family:Georgia,serif;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;\">ALBAIK</div>" +
-        "<div style=\"font-family:Arial,sans-serif;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:#d4af37;margin-top:2px;\">Pure Perfection</div>" +
-        "</div>" +
-        "<div style=\"background:#ffffff;padding:28px;border-radius:0 0 16px 16px;border:1px solid #e6e8eb;border-top:none;font-family:Arial,Helvetica,sans-serif;\">" +
-        inner +
-        "</div>" +
-        "<div style=\"text-align:center;font-family:Arial,sans-serif;font-size:11px;color:#747684;padding:16px;\">" +
-        "Albaik Group of Companies &middot; The Mark of Pure Perfection" +
-        "</div></div></body></html>";
+    private static byte[] LoadLogo()
+    {
+        var assembly = typeof(SmtpEmailSender).Assembly;
+        var resource = assembly.GetManifestResourceNames()
+            .FirstOrDefault(name => name.EndsWith("email-logo-white.png", StringComparison.OrdinalIgnoreCase));
+        if (resource is null) return Array.Empty<byte>();
+
+        using var stream = assembly.GetManifestResourceStream(resource);
+        if (stream is null) return Array.Empty<byte>();
+
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
+    }
 }

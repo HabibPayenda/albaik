@@ -99,6 +99,7 @@ internal static class SqliteSourceReader
 
         var properties = new List<IProperty>();
         var columns = new List<string>();
+        var defaulted = new List<IProperty>();
         foreach (var property in entityType.GetProperties().Where(p => p.PropertyInfo is not null))
         {
             var column = property.GetColumnName()
@@ -107,15 +108,25 @@ internal static class SqliteSourceReader
 
             if (!tableColumns.Contains(column))
             {
-                if (!property.IsNullable)
+                if (property.IsNullable)
                 {
-                    throw new ImportSourceException(
-                        $"Source table '{tableName}' is missing required column '{column}'.");
+                    // A nullable property absent from the old schema simply stays null,
+                    // which is exactly what a database written before the feature means.
+                    continue;
                 }
 
-                // A nullable property absent from the old schema simply stays null, which
-                // is exactly what a database written before the feature means.
-                continue;
+                var clrType = Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType;
+                if (clrType.IsValueType)
+                {
+                    // A non-nullable value added after the source database was written
+                    // (for example ContactMessage.ReplyCount) has a safe zero/false
+                    // default. A missing required string or collection is still an error.
+                    defaulted.Add(property);
+                    continue;
+                }
+
+                throw new ImportSourceException(
+                    $"Source table '{tableName}' is missing required column '{column}'.");
             }
 
             properties.Add(property);
@@ -135,6 +146,9 @@ internal static class SqliteSourceReader
         {
             var entity = Activator.CreateInstance(entityType.ClrType)
                 ?? throw new ImportSourceException($"Could not create '{entityType.ClrType.Name}'.");
+
+            foreach (var property in defaulted)
+                property.PropertyInfo!.SetValue(entity, Activator.CreateInstance(property.ClrType));
 
             for (var index = 0; index < properties.Count; index++)
             {
