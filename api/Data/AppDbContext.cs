@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
     public DbSet<HairProfile> HairProfiles => Set<HairProfile>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
+    public DbSet<ContactMessageReply> ContactMessageReplies => Set<ContactMessageReply>();
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
 
     private const int SlugMaxLength = 200;
@@ -208,6 +209,19 @@ public class AppDbContext : DbContext
             e.Property(x => x.ProductSlug).HasMaxLength(SlugMaxLength);
             e.Property(x => x.ProductName).HasMaxLength(200);
             e.Property(x => x.IpAddress).HasMaxLength(64);
+        });
+
+        b.Entity<ContactMessageReply>(e =>
+        {
+            e.HasIndex(x => x.ContactMessageId);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.FromAddress).HasMaxLength(320);
+            e.Property(x => x.ToAddress).HasMaxLength(320);
+            e.Property(x => x.Source).HasMaxLength(50);
+            e.HasOne(x => x.ContactMessage)
+                .WithMany(message => message.Replies)
+                .HasForeignKey(x => x.ContactMessageId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<AdminUser>(e =>

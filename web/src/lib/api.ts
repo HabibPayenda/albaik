@@ -118,6 +118,7 @@ export const endpoints = {
     messages: '/admin/messages',
     messageRead: (id: number) => `/admin/messages/${id}/read`,
     messageReply: (id: number) => `/admin/messages/${id}/reply`,
+    messageReplies: (id: number) => `/admin/messages/${id}/replies`,
     message: (id: number) => `/admin/messages/${id}`,
   },
 }

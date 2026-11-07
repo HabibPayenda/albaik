@@ -12,11 +12,6 @@
     <None Update="Assets\crown-navy.webp" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- The email logo is embedded so every deployment and test run has it without a wwwroot. -->
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\email-logo-white.png" />
-  </ItemGroup>
-
   <!--
     The integration test suite lives under tests/ and the one-off importer lives under
     Albaik.Importer/; neither may compile into the running API.

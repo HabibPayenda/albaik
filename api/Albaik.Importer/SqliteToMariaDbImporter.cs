@@ -38,6 +38,7 @@ public static class SqliteToMariaDbImporter
         typeof(HairProfile),
         typeof(Page),
         typeof(ContactMessage),
+        typeof(ContactMessageReply),
         typeof(AdminUser),
     };
 

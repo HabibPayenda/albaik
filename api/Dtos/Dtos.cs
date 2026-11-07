@@ -84,6 +84,9 @@ public record PageDto(int Id, string Slug, string Title, string? Subtitle, strin
 public record ContactMessageDto(int Id, string Name, string Email, string? Phone, string? Company, string? Subject,
     string Message, string Kind, bool IsRead, bool EmailDelivered, string? DeliveryError, DateTime CreatedAt,
     DateTime? RepliedAt, int ReplyCount);
+
+public record ContactMessageReplyDto(int Id, int ContactMessageId, string Subject, string Body,
+    string FromAddress, string ToAddress, DateTime SentAt, string Source);
 public record AdminUserDto(int Id, string Username, string? Email, string? DisplayName, string Role, bool IsActive, DateTime? LastLoginAt);
 
 /// <summary>Everything the marketing shell needs in a single round trip.</summary>

@@ -12,7 +12,9 @@ public sealed record EmailBrand(
     string? ContactEmail,
     string? Phone,
     string? Address,
-    IReadOnlyList<(string Label, string Url)> Social);
+    IReadOnlyList<(string Label, string Url)> Social,
+    string? LogoUrl,
+    string? AvatarUrl);
 
 /// <summary>An HTML body and its plain-text alternative.</summary>
 public sealed record EmailContent(string Html, string Text);
@@ -24,8 +26,6 @@ public sealed record EmailContent(string Html, string Text);
 /// </summary>
 public static class EmailTemplate
 {
-    public const string LogoContentId = "albaik-logo";
-
     public static EmailContent ContactNotification(ContactMessage message, EmailBrand brand)
     {
         var kind = message.Kind switch
@@ -213,8 +213,12 @@ public static class EmailTemplate
             "<tr><td style=\"background-color:#050d24;" +
             "background-image:linear-gradient(135deg,#050d24 0%,#0e3b9c 62%,#1a4fcf 100%);" +
             "padding:28px 32px 24px;\">" +
-            "<img src=\"cid:" + LogoContentId + "\" width=\"190\" alt=\"" + Encode(brand.Name) + "\" " +
-            "style=\"display:block;border:0;outline:none;text-decoration:none;max-width:190px;height:auto;\" />" +
+            (brand.LogoUrl is not null
+                ? "<img src=\"" + Encode(brand.LogoUrl) + "\" width=\"190\" alt=\"" + Encode(brand.Name) +
+                  "\" style=\"display:block;border:0;outline:none;text-decoration:none;" +
+                  "max-width:190px;height:auto;\" />"
+                : "<div style=\"font-family:Georgia,'Times New Roman',serif;font-size:26px;" +
+                  "font-weight:700;color:#ffffff;letter-spacing:-0.01em;\">ALBAIK</div>") +
             "<div style=\"height:3px;width:46px;background:#d4af37;border-radius:2px;margin:18px 0 10px;\"></div>" +
             "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:0.26em;" +
             "text-transform:uppercase;color:#d4af37;font-weight:700;\">" + Encode(brand.Tagline) + "</div>" +
@@ -231,11 +235,26 @@ public static class EmailTemplate
     private static string Footer(EmailBrand brand)
     {
         var sb = new StringBuilder();
-        sb.Append("<div style=\"font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;")
+        var identity = new StringBuilder();
+        identity.Append("<div style=\"font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;")
             .Append("color:#ffffff;letter-spacing:-0.01em;\">").Append(Encode(brand.Name)).Append("</div>");
-        sb.Append("<div style=\"margin-top:3px;font-family:Arial,Helvetica,sans-serif;font-size:9px;")
+        identity.Append("<div style=\"margin-top:3px;font-family:Arial,Helvetica,sans-serif;font-size:9px;")
             .Append("letter-spacing:0.24em;text-transform:uppercase;color:#d4af37;font-weight:700;\">")
             .Append(Encode(brand.Tagline)).Append("</div>");
+
+        if (brand.AvatarUrl is not null)
+        {
+            sb.Append("<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr>")
+                .Append("<td width=\"60\" valign=\"top\" style=\"padding-right:12px;\">")
+                .Append("<img src=\"").Append(Encode(brand.AvatarUrl)).Append("\" width=\"44\" height=\"44\" ")
+                .Append("alt=\"").Append(Encode(brand.Name)).Append("\" ")
+                .Append("style=\"display:block;width:44px;height:44px;border-radius:50%;border:1px solid #d4af37;\" />")
+                .Append("</td><td valign=\"middle\">").Append(identity).Append("</td></tr></table>");
+        }
+        else
+        {
+            sb.Append(identity);
+        }
 
         var contact = new List<string>();
         if (!string.IsNullOrWhiteSpace(brand.Address)) contact.Add(Encode(brand.Address));

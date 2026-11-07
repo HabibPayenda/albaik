@@ -236,6 +236,17 @@ export interface ContactMessage {
   replyCount: number
 }
 
+export interface ContactMessageReply {
+  id: number
+  contactMessageId: number
+  subject: string
+  body: string
+  fromAddress: string
+  toAddress: string
+  sentAt: string
+  source: string
+}
+
 export interface AdminUser {
   id: number
   username: string
