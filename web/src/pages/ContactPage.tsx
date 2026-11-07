@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -6,7 +6,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { resetContact, submitContact } from '@/store/uiSlice'
 import { fetchProduct } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { contactHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { Container, PageHero, Section } from '@/components/ui/Layout'
 import { Field, Select, TextArea, TextInput } from '@/components/ui/Field'
@@ -60,6 +61,7 @@ const EMPTY: FormState = {
 export function ContactPage() {
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
   const { contactStatus, contactError } = useAppSelector((state) => state.ui)
   const product = useAppSelector((state) => state.catalog.product)
@@ -74,9 +76,8 @@ export function ContactPage() {
   const mapSrc = mapEmbedSrc(settings.mapEmbed)
   const directionsHref = mapDirectionsUrl(settings.mapEmbed, settings.address)
 
-  useDocumentTitle(
-    isProductEnquiry ? `Product enquiry — ${settings.siteName}` : `Contact — ${settings.siteName}`,
-  )
+  const head = useMemo(() => contactHead(site), [site])
+  useDocumentHead(head)
 
   // Resolve the slug so the context card can name the product.
   useEffect(() => {

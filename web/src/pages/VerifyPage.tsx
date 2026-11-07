@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, endpoints, errorMessage } from '@/lib/api'
 import type { VerifyProduct } from '@/lib/types'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { verifyHead } from '@/lib/seo'
 import { ButtonLink } from '@/components/ui/Button'
 import { StatusPage } from '@/components/ui/StatusPage'
 import { ProductImage } from '@/components/ui/ProductImage'
@@ -26,7 +26,7 @@ const HOLD_SECONDS = 5
 export function VerifyPage() {
   const { code = '' } = useParams()
   const navigate = useNavigate()
-  const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
 
   // The result carries the code it belongs to, so a second scan that reuses this
@@ -37,7 +37,8 @@ export function VerifyPage() {
   const product = result?.code === code ? (result.product ?? null) : null
   const failed = result?.code === code ? (result.failed ?? null) : null
 
-  useDocumentTitle(`${t('verify.title')} — ${settings.siteName}`)
+  const head = useMemo(() => verifyHead(site), [site])
+  useDocumentHead(head)
 
   // One request per scanned code. The response is either the product or a 404, so a
   // failed lookup is an answer rather than a retryable error.

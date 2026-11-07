@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchBrand } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { brandHead } from '@/lib/seo'
 import { useI18n } from '@/i18n'
 import { Container, PageHero, Section, SectionHeading } from '@/components/ui/Layout'
 import { ProductGrid, ResultsBar } from '@/components/ui/ProductGrid'
@@ -32,6 +33,7 @@ export function BrandPage() {
   const { categorySlug = '', brandSlug = '' } = useParams()
   const dispatch = useAppDispatch()
   const settings = useSiteSettings()
+  const site = useSiteMeta()
   const { t } = useI18n()
   /* Which logo URL has already failed to load. Stale artwork must read as "no logo"
      rather than leaving an empty white tile beside the heading. */
@@ -43,12 +45,8 @@ export function BrandPage() {
   const allBrands = useAppSelector((state) => state.site.brands)
   const categories = useAppSelector((state) => state.site.categories)
 
-  useDocumentTitle(
-    brand
-      ? `${brand.name}${brand.categoryName ? ` ${brand.categoryName}` : ''} — Albaik`
-      : `Brand — Albaik`,
-    brand?.description,
-  )
+  const head = useMemo(() => (brand ? brandHead(site, brand) : null), [site, brand])
+  useDocumentHead(head)
 
   useEffect(() => {
     if (categorySlug && brandSlug) dispatch(fetchBrand({ categorySlug, brandSlug }))

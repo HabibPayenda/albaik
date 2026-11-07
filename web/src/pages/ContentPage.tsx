@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { api, endpoints, errorMessage } from '@/lib/api'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useDocumentTitle } from '@/hooks/useDocumentTitle'
+import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
+import { contentHead } from '@/lib/seo'
 import { Container, PageHero } from '@/components/ui/Layout'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
@@ -21,17 +21,18 @@ export function ContentPage({ slugOverride }: { slugOverride?: string }) {
   const { pageSlug = '' } = useParams()
   const slug = slugOverride ?? pageSlug
   const location = useLocation()
-  const settings = useSiteSettings()
+  const site = useSiteMeta()
   const isGuide = !slugOverride && location.pathname.startsWith('/guides/')
 
   const [page, setPage] = useState<Page | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string>()
 
-  useDocumentTitle(
-    page ? `${page.title} — ${settings.siteName}` : settings.siteName,
-    page?.metaDescription,
+  const head = useMemo(
+    () => (page ? contentHead(site, page, location.pathname) : null),
+    [site, page, location.pathname],
   )
+  useDocumentHead(head)
 
   useEffect(() => {
     let cancelled = false
