@@ -41,6 +41,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<SeoFileGenerator>();
 builder.Services.AddSingleton<IEmailTransport, SmtpEmailTransport>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<MailboxReplyImporter>();
+builder.Services.AddHostedService<ImapReplySyncService>();
 builder.Services.AddSingleton<ImagePipeline>();
 builder.Services.AddSingleton<SeoShellRenderer>();
 

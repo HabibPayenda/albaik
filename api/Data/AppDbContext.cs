@@ -218,6 +218,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.FromAddress).HasMaxLength(320);
             e.Property(x => x.ToAddress).HasMaxLength(320);
             e.Property(x => x.Source).HasMaxLength(50);
+            e.Property(x => x.MessageId).HasMaxLength(500);
+            e.HasIndex(x => x.MessageId);
             e.HasOne(x => x.ContactMessage)
                 .WithMany(message => message.Replies)
                 .HasForeignKey(x => x.ContactMessageId)

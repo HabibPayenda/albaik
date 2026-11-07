@@ -307,6 +307,10 @@ namespace Albaik.Api.Migrations
                         .HasMaxLength(320)
                         .HasColumnType("varchar(320)");
 
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
                     b.Property<DateTime>("SentAt")
                         .HasPrecision(6)
                         .HasColumnType("datetime(6)");
@@ -329,6 +333,8 @@ namespace Albaik.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ContactMessageId");
+
+                    b.HasIndex("MessageId");
 
                     b.ToTable("ContactMessageReplies");
                 });

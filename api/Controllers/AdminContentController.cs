@@ -626,6 +626,7 @@ private static string? ValidateSearchSuggestions(string? value)
             ToAddress = message.Email,
             SentAt = DateTime.UtcNow,
             Source = "dashboard",
+            MessageId = sent.MessageId,
         };
         _db.ContactMessageReplies.Add(reply);
 

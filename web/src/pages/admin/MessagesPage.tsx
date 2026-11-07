@@ -376,7 +376,10 @@ export default function MessagesPage() {
                       {reply.body}
                     </p>
                     <p className="mt-2 text-label-sm text-on-surface-variant/70">
-                      Sent from the dashboard to {reply.toAddress}
+                      {reply.source === 'phone'
+                        ? 'Synchronised from your email app'
+                        : 'Sent from the dashboard'}{' '}
+                      to {reply.toAddress}
                     </p>
                   </div>
                 ))
