@@ -13,9 +13,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("Default");
 if (string.IsNullOrWhiteSpace(connectionString))
-    throw new InvalidOperationException(
+{
+    var configurationError = new InvalidOperationException(
         "ConnectionStrings:Default is not configured. Set the ConnectionStrings__Default "
         + "environment variable (or the host's connection string) before starting the application.");
+
+    // The main startup catch block is below the app build. Without this report the most
+    // common deployment mistake — a missing connection string — would be the one failure
+    // that leaves no file behind on shared hosting.
+    await StartupErrorLog.WriteAsync(
+        builder.Environment.ContentRootPath,
+        builder.Environment.EnvironmentName,
+        configurationError);
+
+    throw configurationError;
+}
 
 // The production host is MariaDB 10.10. Pin the version so providers do not
 // auto-detect the (possibly newer) local server and emit SQL for the wrong target.
@@ -189,8 +201,12 @@ try
     await db.Database.OpenConnectionAsync();
     try
     {
+        // Log the version without any connection detail. Then fail fast on an unsupported
+        // server: Pomelo is pinned to 10.10, and older MariaDB releases have neither the
+        // JSON handling nor the datetime(6) behaviour the importer depends on.
         logger.LogInformation("Database ready: {Database} on MariaDB {ServerVersion}",
             dbConnection.Database, dbConnection.ServerVersion);
+        MariaDbVersion.EnsureSupported(dbConnection.ServerVersion);
     }
     finally
     {
@@ -204,20 +220,10 @@ try
 }
 catch (Exception startupError)
 {
-    try
-    {
-        var logPath = Path.Combine(app.Environment.ContentRootPath, "startup-error.log");
-        await File.WriteAllTextAsync(
-            logPath,
-            $"{DateTime.UtcNow:O}{Environment.NewLine}" +
-            $"Environment: {app.Environment.EnvironmentName}{Environment.NewLine}" +
-            $"ContentRoot: {app.Environment.ContentRootPath}{Environment.NewLine}{Environment.NewLine}" +
-            startupError.ToString());
-    }
-    catch
-    {
-        // Writing the report must never mask the failure it is reporting.
-    }
+    await StartupErrorLog.WriteAsync(
+        app.Environment.ContentRootPath,
+        app.Environment.EnvironmentName,
+        startupError);
 
     throw;
 }

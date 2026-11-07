@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Albaik.Api.Data;
 using Albaik.Api.Dtos;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Albaik.Api.Tests;
@@ -87,7 +90,11 @@ public class ProductVerificationTests : IClassFixture<AlbaikApiFactory>
         using var admin = _factory.AdminClient();
         var product = await FirstProductAsync(admin);
 
-        var info = await admin.GetFromJsonAsync<VerificationInfo>($"/api/admin/products/{product.Id}/verification");
+        var response = await admin.GetAsync($"/api/admin/products/{product.Id}/verification");
+        Assert.True(
+            response.IsSuccessStatusCode,
+            await response.Content.ReadAsStringAsync());
+        var info = await response.Content.ReadFromJsonAsync<VerificationInfo>();
 
         Assert.NotNull(info);
         Assert.Equal(16, info!.VerificationCode.Length);
@@ -107,6 +114,42 @@ public class ProductVerificationTests : IClassFixture<AlbaikApiFactory>
         var second = await admin.GetFromJsonAsync<VerificationInfo>($"/api/admin/products/{product.Id}/verification");
 
         Assert.Equal(first!.VerificationCode, second!.VerificationCode);
+    }
+
+    [Fact]
+    public async Task ConcurrentFirstReads_MintOneCodeInsteadOfRacing()
+    {
+        using var admin = _factory.AdminClient();
+        var product = await FirstProductAsync(admin);
+
+        // Simulate a product that predates verification codes.
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var row = await db.Products.SingleAsync(p => p.Id == product.Id);
+            row.VerificationCode = null;
+            await db.SaveChangesAsync();
+        }
+
+        var requests = Enumerable.Range(0, 8)
+            .Select(_ => admin.GetAsync(
+                $"/api/admin/products/{product.Id}/verification"))
+            .ToArray();
+
+        var responses = await Task.WhenAll(requests);
+        var failures = new List<string>();
+        foreach (var response in responses.Where(r => !r.IsSuccessStatusCode))
+            failures.Add($"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        Assert.True(failures.Count == 0, string.Join("\n---\n", failures));
+
+        var results = await Task.WhenAll(
+            responses.Select(r => r.Content.ReadFromJsonAsync<VerificationInfo>()));
+        var codes = results.Select(result => result!.VerificationCode).Distinct().ToList();
+
+        // The conditional UPDATE means every concurrent request converges on one token;
+        // a read-then-write race would print several different QR codes for one product.
+        Assert.Single(codes);
+        Assert.Equal(16, codes[0].Length);
     }
 
     [Fact]

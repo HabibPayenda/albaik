@@ -24,7 +24,23 @@ public sealed class SeoShellMiddleware
             return;
         }
 
-        var page = await resolver.ResolveAsync(context.Request, context.RequestAborted);
+        SeoPage? page;
+        try
+        {
+            page = await resolver.ResolveAsync(context.Request, context.RequestAborted);
+        }
+        catch (SeoConfigurationException exception)
+        {
+            // A production deployment with no `site.publicBaseUrl` must fail loudly instead
+            // of publishing canonicals, Open Graph URLs or JSON-LD built from an arbitrary
+            // Host header. Development never throws this.
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            if (!HttpMethods.IsHead(context.Request.Method))
+                await context.Response.WriteAsync(exception.Message, context.RequestAborted);
+            return;
+        }
+
         if (page is null)
         {
             await _next(context);

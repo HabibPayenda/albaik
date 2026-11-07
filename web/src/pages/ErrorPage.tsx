@@ -30,18 +30,21 @@ export function ErrorPage({ variant = 'site' }: { variant?: 'site' | 'admin' }) 
   const admin = variant === 'admin'
 
   const offline = !online
+  const notFound = isRouteErrorResponse(error) && error.status === 404
   const title = offline
     ? t('errors.offlineTitle')
     : admin
       ? t('errors.adminTitle')
       : t('errors.title')
-  useDocumentTitle(`${title} — ${settings.siteName}`)
+  // A 404 delegates to NotFoundPage, which installs its own noindex head. Applying a
+  // title here would overwrite it with the generic error title.
+  useDocumentTitle(notFound ? null : `${title} — ${settings.siteName}`)
 
   useEffect(() => {
     if (error) console.error('[albaik] route error:', error)
   }, [error])
 
-  if (isRouteErrorResponse(error) && error.status === 404) return <NotFoundPage />
+  if (notFound) return <NotFoundPage />
 
   const detail =
     import.meta.env.DEV && error

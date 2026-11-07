@@ -14,6 +14,10 @@ const MANAGED_TAGS = [
   'meta[property^="og:"]',
   'meta[name^="twitter:"]',
   'link[rel="canonical"]',
+  // The server shell renders Product/BreadcrumbList JSON-LD for that route. React
+  // replaces the body, so leaving the old script in place would keep advertising the
+  // previous page's schema after a client-side navigation.
+  'script[type="application/ld+json"]',
 ].join(', ')
 
 function clearManagedTags() {

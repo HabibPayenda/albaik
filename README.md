@@ -261,7 +261,8 @@ export ALBAIK_TEST_MYSQL="Server=127.0.0.1;Port=3306;User=root;Password=;CharSet
 dotnet test api/tests/Albaik.Api.Tests/Albaik.Api.Tests.csproj
 ```
 
-The suite fails with a clear prerequisite message if MariaDB is unreachable.
+The suite needs a reachable MariaDB server; without one the tests fail when they
+try to create their throwaway databases.
 
 ### Cutover
 

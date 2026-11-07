@@ -81,9 +81,13 @@ public sealed class ResponseHeadersMiddleware
 
         // Uploaded photography and the brand-kit images bundled into the build change
         // only on a deploy or a staff upload, so a long but finite policy is enough.
+        // The `/products/` and `/brand/` rules are for image files only: those prefixes
+        // also carry HTML pages (`/products/{slug}`), which must not be cached for a
+        // month. `/uploads/` is always an asset folder.
+        var hasExtension = Path.HasExtension(path);
         if (path.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/products/", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("/brand/", StringComparison.OrdinalIgnoreCase)
+            || (hasExtension && path.StartsWith("/products/", StringComparison.OrdinalIgnoreCase))
+            || (hasExtension && path.StartsWith("/brand/", StringComparison.OrdinalIgnoreCase))
             || ImageExtensions.Contains(Path.GetExtension(path)))
         {
             SetCache(context.Response, ImageCachePolicy);

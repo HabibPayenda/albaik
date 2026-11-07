@@ -260,8 +260,8 @@ export function brandHead(site: SiteMeta, brand: Brand): DocumentHead {
   const namePart = categoryName ? `${brand.name} ${categoryName}` : brand.name
 
   const description = composeDescription(
-    `${brand.name} - ${categoryName}.`,
-    brand.description || brand.tagline,
+    `${brand.name} — ${categoryName}.`,
+    brand.description ?? brand.tagline,
     `Explore ${brand.name} products in the ${categoryName} collection from Albaik.`,
   )
 

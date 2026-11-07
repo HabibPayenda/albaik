@@ -75,8 +75,10 @@ export function resolveBackdrop(
     set: Partial<Record<HeroVariant, string>> | undefined,
     single: string | undefined,
   ): string => {
-    for (const candidate of HERO_VARIANTS.slice(HERO_VARIANTS.indexOf(variant))) {
-      const url = set?.[candidate]
+    // Walk toward *wider* compositions (the list is widest-first), never toward a
+    // narrower one: a desktop-only slide must supply the mobile image, not vanish.
+    for (let index = HERO_VARIANTS.indexOf(variant); index >= 0; index -= 1) {
+      const url = set?.[HERO_VARIANTS[index]]
       if (typeof url === 'string' && url) return url
     }
     return single || ''

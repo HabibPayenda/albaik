@@ -1,6 +1,7 @@
 using Albaik.Api.Data;
 using Albaik.Api.Dtos;
 using Albaik.Api.Models;
+using Albaik.Api.Seo;
 using Albaik.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -299,15 +300,34 @@ public class AdminCatalogController : ControllerBase
     /// </summary>
     private async Task<string> EnsureVerificationCodeAsync(int productId)
     {
-        var p = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId)
-                ?? throw new InvalidOperationException($"Product {productId} not found.");
+        var product = await _db.Products.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == productId)
+            ?? throw new InvalidOperationException($"Product {productId} not found.");
 
-        var existing = p.VerificationCode;
-        if (existing is not null && VerificationCodes.IsWellFormed(existing)) return existing;
+        var existing = product.VerificationCode;
+        if (VerificationCodes.IsWellFormed(existing)) return existing!;
 
-        p.VerificationCode = await NewUniqueVerificationCodeAsync();
-        await _db.SaveChangesAsync();
-        return p.VerificationCode;
+        // Writing with a conditional UPDATE rather than read-then-save means two
+        // concurrent dashboard requests accept the same code instead of the second one
+        // overwriting the first after its QR was already printed. Both requests re-read
+        // the winner's value.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var candidate = await NewUniqueVerificationCodeAsync();
+            var updated = await _db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE `Products` SET `VerificationCode` = {candidate} WHERE `Id` = {productId} AND `VerificationCode` IS NULL");
+
+            var stored = await _db.Products.AsNoTracking()
+                .Where(x => x.Id == productId)
+                .Select(x => x.VerificationCode)
+                .FirstOrDefaultAsync();
+
+            if (VerificationCodes.IsWellFormed(stored)) return stored!;
+            if (updated > 0 && stored is not null) return stored;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not mint a verification code for product {productId}.");
     }
 
     private async Task<string> NewUniqueVerificationCodeAsync()
@@ -326,6 +346,15 @@ public class AdminCatalogController : ControllerBase
     {
         var configured = await PublicSiteUrl.ReadAsync(_db, CancellationToken.None);
         if (configured is not null) return configured;
+
+        if (_env.IsProduction())
+        {
+            // A printed QR must not encode whatever host the dashboard happened to be on.
+            // Refusing is the only safe answer when the operator has not named the origin.
+            throw new SeoConfigurationException(
+                "Cannot generate a product QR code: site.publicBaseUrl is empty or invalid. "
+                + "Set an absolute https origin (for example https://albaik-group.af) in the dashboard Settings.");
+        }
 
         // Development fallback: a QR proof generated from a laptop must still encode
         // the host the request arrived on. Never a guessed production domain.

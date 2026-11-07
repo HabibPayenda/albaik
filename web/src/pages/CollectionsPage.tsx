@@ -30,6 +30,10 @@ export function CollectionsPage() {
   const [params, setParams] = useSearchParams()
 
   const categories = useAppSelector((state) => state.catalog.categories)
+  // The bootstrap already carries the collection index. Using it for the head means a
+  // hard load of `/collections?category=hair-care` gets the right canonical/robots on the
+  // first render instead of briefly advertising the unfiltered or noindex view.
+  const siteCategories = useAppSelector((state) => state.site.categories)
   const { products, productTotal, productTotalPages, productPage, listStatus } = useAppSelector(
     (state) => state.catalog,
   )
@@ -39,10 +43,14 @@ export function CollectionsPage() {
   const search = params.get('search') ?? ''
   const page = Number(params.get('page') ?? 1)
 
-  const head = useMemo(
-    () => collectionsHead(site, categories, { category, brand, search, page }),
-    [site, categories, category, brand, search, page],
-  )
+  const head = useMemo(() => {
+    const available = categories.length ? categories : siteCategories
+    // On a hard load of `?category=...` the bootstrap may not have arrived yet. Leave
+    // the server-rendered canonical/robots in place instead of briefly emitting the
+    // "unknown collection" noindex view. The head is applied once the index is known.
+    if (category && available.length === 0) return null
+    return collectionsHead(site, available, { category, brand, search, page })
+  }, [site, categories, siteCategories, category, brand, search, page])
   useDocumentHead(head)
 
   useEffect(() => {

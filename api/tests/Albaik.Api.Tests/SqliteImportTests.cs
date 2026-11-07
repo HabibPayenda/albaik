@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Albaik.Api.Data;
 using Albaik.Api.Models;
 using Albaik.Importer;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using Xunit;
@@ -191,6 +192,102 @@ public class SqliteImportTests
                     "GGK69TAE7FPN96ZR",
                     (await db.Products.SingleAsync(p => p.Id == 101)).VerificationCode);
             }
+        }
+        finally
+        {
+            await DropDatabaseAsync(databaseName);
+            TryDeleteDirectory(fixtureDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task Import_AcceptsAnOldProductSchemaWithoutMetaDescription()
+    {
+        var databaseName = $"albaik_import_oldschema_{Guid.NewGuid():N}";
+        var targetConnectionString = ConnectionStringFor(databaseName);
+        var fixtureDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "albaik-import-oldschema-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var fixture = SqliteImportFixtureBuilder.Create(
+                fixtureDirectory, omitProductMetaDescription: true);
+
+            var report = await SqliteToMariaDbImporter.RunAsync(new ImportOptions
+            {
+                SourcePath = fixture.DatabasePath,
+                TargetConnectionString = targetConnectionString,
+                ApplyMigrations = true,
+            });
+
+            Assert.True(report.Succeeded, Describe(report));
+
+            await using var db = new AppDbContext(OptionsFor(targetConnectionString));
+            var product = await db.Products.SingleAsync(p => p.Id == 101);
+
+            // The column is absent from the source, so the nullable model property is null
+            // rather than the import failing or inventing a snippet.
+            Assert.Null(product.MetaDescription);
+            Assert.Equal("GGK69TAE7FPN96ZR", product.VerificationCode);
+        }
+        finally
+        {
+            await DropDatabaseAsync(databaseName);
+            TryDeleteDirectory(fixtureDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task FailedForcedRetry_RollsBackToThePreviousContent()
+    {
+        var databaseName = $"albaik_import_rollback_{Guid.NewGuid():N}";
+        var targetConnectionString = ConnectionStringFor(databaseName);
+        var fixtureDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "albaik-import-rollback-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var fixture = SqliteImportFixtureBuilder.Create(fixtureDirectory);
+
+            var first = await SqliteToMariaDbImporter.RunAsync(new ImportOptions
+            {
+                SourcePath = fixture.DatabasePath,
+                TargetConnectionString = targetConnectionString,
+                ApplyMigrations = true,
+            });
+            Assert.True(first.Succeeded, Describe(first));
+
+            // Make the second run fail after the forced clear-out: the source Product now
+            // points at a Brand that does not exist in the target.
+            using (var source = new SqliteConnection(
+                       $"Data Source={fixture.DatabasePath};Pooling=False"))
+            {
+                source.Open();
+                using var command = source.CreateCommand();
+                // The fixture declares the real foreign keys; a deliberate dangling
+                // reference is the point of this test, so switch them off for the edit.
+                command.CommandText =
+                    "PRAGMA foreign_keys = OFF; UPDATE Products SET BrandId = 999 WHERE Id = 101;";
+                command.ExecuteNonQuery();
+            }
+
+            await Assert.ThrowsAnyAsync<Exception>(() =>
+                SqliteToMariaDbImporter.RunAsync(new ImportOptions
+                {
+                    SourcePath = fixture.DatabasePath,
+                    TargetConnectionString = targetConnectionString,
+                    Force = true,
+                }));
+
+            // A TRUNCATE outside the transaction would leave this target empty. The
+            // transactional DELETE must have restored the content the first run wrote.
+            await using var db = new AppDbContext(OptionsFor(targetConnectionString));
+            Assert.Equal(2, await db.Categories.CountAsync());
+            Assert.Equal(2, await db.Products.CountAsync());
+            Assert.Equal(2, await db.ProductImages.CountAsync());
+            Assert.NotNull(await db.Products.SingleOrDefaultAsync(p => p.Id == 101));
         }
         finally
         {

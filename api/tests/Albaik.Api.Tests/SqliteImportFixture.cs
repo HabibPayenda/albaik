@@ -20,7 +20,7 @@ internal static class SqliteImportFixtureBuilder
     public const string AdminPassword = "Fixture@123";
     public const string VerificationCode = "GGK69TAE7FPN96ZR";
 
-    public static SqliteImportFixture Create(string directory)
+    public static SqliteImportFixture Create(string directory, bool omitProductMetaDescription = false)
     {
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "albaik-fixture.db");
@@ -30,7 +30,9 @@ internal static class SqliteImportFixtureBuilder
         using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
         connection.Open();
 
-        Execute(connection, Schema);
+        Execute(connection, omitProductMetaDescription
+            ? SchemaWithoutProductMetaDescription()
+            : Schema);
 
         // -------------------------------------------------------------- Categories
         Insert(connection, "Categories",
@@ -69,13 +71,13 @@ internal static class SqliteImportFixtureBuilder
             ("UpdatedAt", "2026-09-26 06:49:00.000001"));
 
         // ---------------------------------------------------------------- Products
-        Insert(connection, "Products",
+        var firstProductColumns = new List<(string Column, object? Value)>
+        {
             ("Id", 101), ("Slug", "albaik-anti-dandruff-shampoo"),
             ("Name", "Albaik Anti-Dandruff Shampoo"),
             ("Subtitle", "For dandruff-related scalp and hair care"),
             ("FormulationLabel", "Aqua Soothing Complex"),
             ("ShortDescription", "Short description"), ("Description", "Long description"),
-            ("MetaDescription", "Imported search snippet"),
             ("CategoryId", 41), ("BrandId", 71), ("Size", "400 ML"),
             ("Price", "123.45"), ("CompareAtPrice", "150.00"), ("Currency", "AFN"),
             ("PriceNote", "Price on request"), ("Rating", 4.5), ("ReviewCount", 7),
@@ -90,7 +92,15 @@ internal static class SqliteImportFixtureBuilder
             ("CreatedAt", "2026-09-26 06:47:31.713292"),
             ("UpdatedAt", "2026-10-31 13:53:41.161137"),
             ("Ibn", "6291104123456"),
-            ("VerificationCode", VerificationCode));
+            ("VerificationCode", VerificationCode),
+        };
+
+        // An old live database predates Products.MetaDescription. The importer must read
+        // that copy too, leaving the missing nullable column null.
+        if (!omitProductMetaDescription)
+            firstProductColumns.Add(("MetaDescription", "Imported search snippet"));
+
+        Insert(connection, "Products", firstProductColumns.ToArray());
 
         Insert(connection, "Products",
             ("Id", 102), ("Slug", "avora-shine-coconut-shampoo"),
@@ -319,6 +329,22 @@ internal static class SqliteImportFixtureBuilder
     }
 
     private static string Quote(string identifier) => "\"" + identifier.Replace("\"", "\"\"") + "\"";
+
+    /// <summary>
+    /// The same schema as the live file before the Product search-snippet feature: the
+    /// Pages table still has MetaDescription, only Products does not.
+    /// </summary>
+    private static string SchemaWithoutProductMetaDescription()
+    {
+        var start = Schema.IndexOf("CREATE TABLE \"Products\"", StringComparison.Ordinal);
+        var end = Schema.IndexOf("CREATE TABLE \"ProductImages\"", StringComparison.Ordinal);
+        var products = Schema[start..end];
+        products = System.Text.RegularExpressions.Regex.Replace(
+            products,
+            "[ \\t]*\"MetaDescription\" TEXT NULL,\\r?\\n?",
+            string.Empty);
+        return Schema[..start] + products + Schema[end..];
+    }
 
     private const string Schema =
         """

@@ -22,8 +22,16 @@ public sealed class SeoRouteResolver
     private const string ContactPath = "/contact";
 
     private readonly AppDbContext _db;
+    private readonly bool _requireConfiguredOrigin;
 
-    public SeoRouteResolver(AppDbContext db) => _db = db;
+    public SeoRouteResolver(AppDbContext db, IWebHostEnvironment environment)
+    {
+        _db = db;
+        _requireConfiguredOrigin = environment.IsProduction();
+    }
+
+    private Task<SiteSettingsSnapshot> LoadSiteAsync(HttpRequest request, CancellationToken ct)
+        => SiteSettingsSnapshot.LoadAsync(_db, request, _requireConfiguredOrigin, ct);
 
     public async Task<SeoPage?> ResolveAsync(HttpRequest request, CancellationToken ct)
     {
@@ -36,33 +44,33 @@ public sealed class SeoRouteResolver
 
         if (path == "/")
         {
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             return await HomePageShell.BuildAsync(_db, site, ct);
         }
 
         if (string.Equals(path, CollectionsPath, StringComparison.OrdinalIgnoreCase))
         {
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             return await CollectionsIndexShell.BuildAsync(_db, site, request, ct);
         }
 
         if (string.Equals(path, ContactPath, StringComparison.OrdinalIgnoreCase))
         {
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             return ContactPageShell.Build(site);
         }
 
         if (path.StartsWith(VerifyPath, StringComparison.OrdinalIgnoreCase))
         {
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             var code = Uri.UnescapeDataString(path[VerifyPath.Length..]);
             return await VerifyPageShell.BuildAsync(_db, site, code, ct);
         }
 
         if (TryContentRoute(path, out var contentSlug, out var isGuide))
         {
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
-            var page = await ContentPageShell.BuildAsync(_db, site, contentSlug, path, isGuide, ct);
+            var site = await LoadSiteAsync(request, ct);
+            var page = await ContentPageShell.BuildAsync(_db, site, contentSlug, isGuide, ct);
             return page ?? NotFoundShell.Build(site);
         }
 
@@ -71,7 +79,7 @@ public sealed class SeoRouteResolver
             var remainder = path[(CollectionsPath.Length + 1)..];
             var segments = remainder.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             if (segments.Length == 1)
             {
                 var collection = await CollectionPageShell.BuildAsync(
@@ -96,7 +104,7 @@ public sealed class SeoRouteResolver
         if (path.StartsWith(ProductsPath + "/", StringComparison.OrdinalIgnoreCase))
         {
             var slug = path[(ProductsPath.Length + 1)..];
-            var site = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+            var site = await LoadSiteAsync(request, ct);
             if (slug.Length == 0 || slug.Contains('/')) return NotFoundShell.Build(site);
 
             var product = await ProductPageShell.BuildAsync(
@@ -106,7 +114,7 @@ public sealed class SeoRouteResolver
 
         // A `/brands/{slug}` shortcut is answered by the canonical-redirect middleware
         // when the slug is real; an unknown one is a genuine 404, not the SPA's 200.
-        var notFoundSite = await SiteSettingsSnapshot.LoadAsync(_db, request, ct);
+        var notFoundSite = await LoadSiteAsync(request, ct);
         return NotFoundShell.Build(notFoundSite);
     }
 

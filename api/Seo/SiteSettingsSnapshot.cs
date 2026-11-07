@@ -1,4 +1,5 @@
 using Albaik.Api.Data;
+using Albaik.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Albaik.Api.Seo;
@@ -19,7 +20,7 @@ public sealed record SiteSettingsSnapshot(
     IReadOnlyList<string> SameAs)
 {
     public static async Task<SiteSettingsSnapshot> LoadAsync(
-        AppDbContext db, HttpRequest request, CancellationToken ct)
+        AppDbContext db, HttpRequest request, bool requireConfiguredOrigin, CancellationToken ct)
     {
         var settings = await db.SiteSettings.AsNoTracking()
             .Select(s => new { s.Key, s.Value })
@@ -34,8 +35,28 @@ public sealed record SiteSettingsSnapshot(
         var name = Value("site.name", "Albaik Group of Companies");
         var tagline = Value("site.tagline", "The Mark of Pure Perfection");
         var description = Value("site.description", tagline);
-        var baseUrl = SeoUrl.BaseUrl(settings.GetValueOrDefault("site.publicBaseUrl"),
-            request.Scheme, request.Host.ToString());
+
+        // Production must never invent a canonical host from whatever Host header the
+        // request arrived with: the spec makes an empty `site.publicBaseUrl` a hard
+        // configuration error there. Development still falls back to the request origin
+        // so a laptop build is useful without configuration.
+        var configuredOrigin = PublicSiteUrl.Normalize(
+            settings.GetValueOrDefault(PublicSiteUrl.SettingKey));
+        string baseUrl;
+        if (configuredOrigin is not null)
+        {
+            baseUrl = configuredOrigin;
+        }
+        else if (requireConfiguredOrigin)
+        {
+            throw new SeoConfigurationException(
+                "Cannot render a public page: site.publicBaseUrl is empty or invalid. "
+                + "Set an absolute https origin (for example https://albaik-group.af) in the dashboard Settings.");
+        }
+        else
+        {
+            baseUrl = $"{request.Scheme}://{request.Host}".TrimEnd('/');
+        }
 
         var sameAs = new[] { "social.facebook", "social.instagram", "social.tiktok", "social.linkedin" }
             .Select(key => Value(key))

@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchProduct, clearProduct } from '@/store/catalogSlice'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentHead, useSiteMeta } from '@/hooks/useDocumentHead'
-import { productHead } from '@/lib/seo'
+import { notFoundHead, productHead } from '@/lib/seo'
 import { Container, Section, SectionHeading } from '@/components/ui/Layout'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
 import { ProductImage } from '@/components/ui/ProductImage'
@@ -62,7 +62,12 @@ export function ProductPage() {
     [settings],
   )
 
-  const head = useMemo(() => (product ? productHead(site, product) : null), [site, product])
+  const head = useMemo(() => {
+    if (product) return productHead(site, product)
+    // A failed/missing product must not leave the previous route's canonical behind.
+    if (detailStatus === 'error') return notFoundHead(site)
+    return null
+  }, [site, product, detailStatus])
   useDocumentHead(head)
 
   useEffect(() => {

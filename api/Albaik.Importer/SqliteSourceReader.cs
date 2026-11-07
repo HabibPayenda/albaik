@@ -91,14 +91,36 @@ internal static class SqliteSourceReader
         var keyProperties = entityType.FindPrimaryKey()?.Properties.ToArray()
             ?? throw new ImportSourceException($"Table '{tableName}' has no primary key to preserve.");
 
-        var properties = entityType.GetProperties()
-            .Where(p => p.PropertyInfo is not null)
-            .ToArray();
+        // The live SQLite file can predate columns the current model has (for example
+        // Products.MetaDescription). Selecting from the model alone sends a SELECT for a
+        // column that is not there and fails the whole import, so the actual table shape
+        // decides which columns are read.
+        var tableColumns = await ReadColumnNamesAsync(connection, tableName, cancellationToken);
 
-        var columns = properties
-            .Select(p => p.GetColumnName()
-                ?? throw new ImportSourceException($"Property '{entityType.ClrType.Name}.{p.Name}' is not mapped to a column."))
-            .ToArray();
+        var properties = new List<IProperty>();
+        var columns = new List<string>();
+        foreach (var property in entityType.GetProperties().Where(p => p.PropertyInfo is not null))
+        {
+            var column = property.GetColumnName()
+                ?? throw new ImportSourceException(
+                    $"Property '{entityType.ClrType.Name}.{property.Name}' is not mapped to a column.");
+
+            if (!tableColumns.Contains(column))
+            {
+                if (!property.IsNullable)
+                {
+                    throw new ImportSourceException(
+                        $"Source table '{tableName}' is missing required column '{column}'.");
+                }
+
+                // A nullable property absent from the old schema simply stays null, which
+                // is exactly what a database written before the feature means.
+                continue;
+            }
+
+            properties.Add(property);
+            columns.Add(column);
+        }
 
         var orderBy = string.Join(", ", keyProperties.Select(p => Quote(p.GetColumnName()!)));
 
@@ -114,7 +136,7 @@ internal static class SqliteSourceReader
             var entity = Activator.CreateInstance(entityType.ClrType)
                 ?? throw new ImportSourceException($"Could not create '{entityType.ClrType.Name}'.");
 
-            for (var index = 0; index < properties.Length; index++)
+            for (var index = 0; index < properties.Count; index++)
             {
                 var property = properties[index];
                 var column = columns[index];
@@ -139,6 +161,23 @@ internal static class SqliteSourceReader
         }
 
         return new SourceTable(entityType, tableName, rows, ContentChecksum.Compute(entityType, rows));
+    }
+
+    private static async Task<HashSet<string>> ReadColumnNamesAsync(
+        SqliteConnection connection, string tableName, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({Quote(tableName)})";
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            // table_info columns: cid, name, type, notnull, dflt_value, pk.
+            names.Add(reader.GetString(1));
+        }
+
+        return names;
     }
 
     private static object ConvertValue(object raw, IProperty property, string tableName, string column)

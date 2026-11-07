@@ -35,12 +35,23 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
     public static AlbaikApiFactory ForUpgradeScenario(string databaseName, bool keepDatabaseForFirstBoot)
         => new(databaseName, keepDatabaseForFirstBoot);
 
+    /// <summary>
+    /// A factory booted in a named environment (for example "Production"), sharing the
+    /// same unique database, test configuration and throwaway web root as the default.
+    /// </summary>
+    public static AlbaikApiFactory ForEnvironment(string environment)
+        => new(null, false, environment);
+
     public AlbaikApiFactory() : this(null, false) { }
 
-    private AlbaikApiFactory(string? databaseName, bool keepDatabase)
+    private readonly string _environment;
+
+    private AlbaikApiFactory(
+        string? databaseName, bool keepDatabase, string environment = "Development")
     {
         _databaseName = databaseName ?? $"albaik_tests_{Guid.NewGuid():N}";
         _keepDatabase = keepDatabase;
+        _environment = environment;
         _connectionString = ConnectionStringFor(_databaseName);
         // Uploads write under the web root; point it at a throwaway directory so a test
         // never leaves files in the real wwwroot/uploads.
@@ -88,7 +99,7 @@ public class AlbaikApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment(_environment);
         // Host settings flow into builder.Configuration before Program's top-level
         // statements run, so the JWT key and DB connection the API stabilizes at
         // startup are the test values.

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Albaik.Api.Dtos;
 
 // ---------------------------------------------------------------- read models
@@ -311,12 +313,30 @@ public class IconStateInput
 
 public class ContactInput
 {
+    /// <summary>
+    /// These limits mirror the ContactMessage columns. Without them an over-long value
+    /// reaches SaveChanges after the notification email has already been sent, and the
+    /// visitor sees a 500 for a message the team was already told about. [ApiController]
+    /// turns a violation into a 400 before any work happens.
+    /// </summary>
+    [StringLength(200)]
     public string Name { get; set; } = "";
+
+    [StringLength(320)]
     public string Email { get; set; } = "";
+
+    [StringLength(50)]
     public string? Phone { get; set; }
+
+    [StringLength(200)]
     public string? Company { get; set; }
+
+    [StringLength(300)]
     public string? Subject { get; set; }
+
+    [StringLength(5000)]
     public string Message { get; set; } = "";
+
     public string Kind { get; set; } = "contact";
     /// <summary>
     /// Slug of the product the enquiry started from, when the visitor used "Enquire about
