@@ -40,6 +40,10 @@ public sealed class SeoShellMiddleware
 
         context.Response.StatusCode = page.StatusCode;
         context.Response.ContentType = "text/html; charset=utf-8";
+        // The same directive is carried in both places a crawler looks: the robots meta
+        // tag in the head and the X-Robots-Tag header. Indexable pages leave both empty.
+        if (!string.IsNullOrWhiteSpace(page.Robots))
+            context.Response.Headers["X-Robots-Tag"] = page.Robots;
         if (HttpMethods.IsHead(context.Request.Method)) return;
         await context.Response.WriteAsync(html, context.RequestAborted);
     }

@@ -83,6 +83,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("spa");
 
+// The dashboard must never enter the index, including the SPA fallback HTML that serves
+// its client-side routes (ticket 08).
+app.UseMiddleware<DashboardNoIndexMiddleware>();
+
 // One canonical address per page, answered before the SPA fallback (ticket 10).
 // This must run before the SEO shell so canonical-host/path redirects happen
 // before any shell rendering.

@@ -65,7 +65,7 @@ public static class BrandPageShell
             ?? SeoUrl.Asset(site.BaseUrl, brand.LogoUrl)
             ?? SeoUrl.Absolute(site.BaseUrl, OpenGraphImagePath);
 
-        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new[]
+        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new (string, string?)[]
         {
             ("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
             ("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),

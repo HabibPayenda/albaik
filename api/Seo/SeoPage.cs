@@ -14,6 +14,9 @@ public enum SeoPageType
     Collection,
     Brand,
     Product,
+    ContentPage,
+    Contact,
+    Verification,
     NotFound,
 }
 

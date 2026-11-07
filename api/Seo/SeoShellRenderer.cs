@@ -89,7 +89,8 @@ public sealed class SeoShellRenderer
         sb.Append("<title>").Append(Html(page.Title)).Append("</title>");
         sb.AppendLine();
         AppendMeta(sb, "name", "description", page.Description);
-        AppendLink(sb, "canonical", page.CanonicalUrl);
+        if (!string.IsNullOrWhiteSpace(page.CanonicalUrl))
+            AppendLink(sb, "canonical", page.CanonicalUrl);
         if (!string.IsNullOrWhiteSpace(page.Robots))
             AppendMeta(sb, "name", "robots", page.Robots);
 
@@ -97,7 +98,10 @@ public sealed class SeoShellRenderer
         AppendMeta(sb, "property", "og:site_name", page.SiteName);
         AppendMeta(sb, "property", "og:title", page.Title);
         AppendMeta(sb, "property", "og:description", page.Description);
-        AppendMeta(sb, "property", "og:url", page.CanonicalUrl);
+        // Private surfaces (Verification, 404) deliberately have no canonical address,
+        // so no stale og:url is emitted either.
+        if (!string.IsNullOrWhiteSpace(page.CanonicalUrl))
+            AppendMeta(sb, "property", "og:url", page.CanonicalUrl);
         AppendMeta(sb, "property", "og:image", page.OpenGraphImageUrl);
         AppendMeta(sb, "property", "og:image:width", page.OpenGraphImageWidth.ToString());
         AppendMeta(sb, "property", "og:image:height", page.OpenGraphImageHeight.ToString());

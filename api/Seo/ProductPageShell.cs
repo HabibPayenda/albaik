@@ -59,7 +59,7 @@ public static class ProductPageShell
         var imageWidth = usingFallback ? OpenGraphFallbackWidth : ProductImageWidth;
         var imageHeight = usingFallback ? OpenGraphFallbackHeight : ProductImageHeight;
 
-        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new[]
+        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new (string, string?)[]
         {
             ("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
             ("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),

@@ -2,9 +2,9 @@ namespace Albaik.Api.Seo;
 
 /// <summary>
 /// Builds the single JSON-LD graph every shell emits: the site-wide Organization and
-/// WebSite nodes plus the page-specific node (ItemList today; BreadcrumbList and
-/// Product in tickets 07/08/13). Keeping the site nodes here means every page type
-/// describes the same company and site, with the same ids.
+/// WebSite nodes plus the page-specific node (ItemList, BreadcrumbList or Product).
+/// Keeping the site nodes here means every page type describes the same company and
+/// site, with the same ids.
 /// </summary>
 internal static class SeoJsonLd
 {
@@ -74,18 +74,25 @@ internal static class SeoJsonLd
         };
     }
 
-    public static Dictionary<string, object?> ListItem(int position, string name, string url) => new()
+    public static Dictionary<string, object?> ListItem(int position, string name, string? url)
     {
-        ["@type"] = "ListItem",
-        ["position"] = position,
-        ["name"] = name,
-        ["url"] = url,
-    };
+        var item = new Dictionary<string, object?>
+        {
+            ["@type"] = "ListItem",
+            ["position"] = position,
+            ["name"] = name,
+        };
+        // A breadcrumb level with no route of its own ("Guides") still names its place
+        // in the hierarchy; only the link is omitted.
+        if (url is not null) item["url"] = url;
+        return item;
+    }
 
     /// <summary>
-    /// The page's place in the catalogue hierarchy. Used on Brand and Product pages now
-    /// and, from ticket 13, wherever visible breadcrumbs are rendered. The final entry
-    /// is the current page, so its <c>item</c> is the canonical URL.
+    /// The page's place in the catalogue hierarchy. Used on Brand, Product, content and
+    /// not-found pages, and reusable by ticket 13 for visible breadcrumbs. Each level
+    /// carries its canonical URL in <c>item</c>, which is the property search engines
+    /// read for a BreadcrumbList.
     /// </summary>
     public static Dictionary<string, object?> BreadcrumbList(
         string canonicalUrl, IEnumerable<(string Name, string Url)> items)
@@ -102,13 +109,36 @@ internal static class SeoJsonLd
         };
     }
 
-    public static Dictionary<string, object?> BreadcrumbItem(int position, string name, string url) => new()
+    /// <summary>
+    /// Overload for a breadcrumb level with no route of its own (for example "Guides"),
+    /// which names its place in the hierarchy but omits the link.
+    /// </summary>
+    public static Dictionary<string, object?> BreadcrumbList(
+        string canonicalUrl, params (string Name, string? Url)[] items)
     {
-        ["@type"] = "ListItem",
-        ["position"] = position,
-        ["name"] = name,
-        ["item"] = url,
-    };
+        var elements = items
+            .Select((item, index) => BreadcrumbItem(index + 1, item.Name, item.Url))
+            .ToArray();
+
+        return new Dictionary<string, object?>
+        {
+            ["@type"] = "BreadcrumbList",
+            ["@id"] = canonicalUrl + "#breadcrumb",
+            ["itemListElement"] = elements,
+        };
+    }
+
+    public static Dictionary<string, object?> BreadcrumbItem(int position, string name, string? url)
+    {
+        var item = new Dictionary<string, object?>
+        {
+            ["@type"] = "ListItem",
+            ["position"] = position,
+            ["name"] = name,
+        };
+        if (url is not null) item["item"] = url;
+        return item;
+    }
 
     /// <summary>
     /// A Product node without offers, availability or reviews: prices are still
