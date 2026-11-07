@@ -172,4 +172,8 @@ public class ContactMessage
     public string? DeliveryError { get; set; }
     public string? IpAddress { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>When staff last replied from the dashboard; null until the first reply.</summary>
+    public DateTime? RepliedAt { get; set; }
+    /// <summary>How many dashboard replies have been sent for this enquiry.</summary>
+    public int ReplyCount { get; set; }
 }

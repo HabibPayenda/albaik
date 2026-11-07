@@ -39,7 +39,8 @@ builder.Services.AddScoped<SeoRouteResolver>();
 // Crawl files are generated from the database and cached briefly per public origin.
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<SeoFileGenerator>();
-builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddSingleton<IEmailTransport, SmtpEmailTransport>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<ImagePipeline>();
 builder.Services.AddSingleton<SeoShellRenderer>();
 

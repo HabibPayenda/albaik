@@ -587,6 +587,48 @@ private static string? ValidateSearchSuggestions(string? value)
         return m.ToDto();
     }
 
+    [HttpPost("messages/{id:int}/reply")]
+    public async Task<ActionResult<object>> ReplyToMessage(
+        int id, ReplyMessageInput input, CancellationToken ct)
+    {
+        var message = await _db.ContactMessages.FindAsync(new object[] { id }, ct);
+        if (message is null) return NotFound(new { message = "Message not found." });
+
+        if (string.IsNullOrWhiteSpace(input.Body))
+            return BadRequest(new { message = "Write a reply before sending." });
+
+        var siteName = await _db.SiteSettings.AsNoTracking()
+            .Where(setting => setting.Key == "site.name")
+            .Select(setting => setting.Value)
+            .FirstOrDefaultAsync(ct);
+        if (string.IsNullOrWhiteSpace(siteName)) siteName = "Albaik Group of Companies";
+
+        var subject = string.IsNullOrWhiteSpace(input.Subject)
+            ? $"Re: {message.Subject ?? "Your enquiry to Albaik"}"
+            : input.Subject.Trim();
+
+        var sent = await _email.SendReplyAsync(message, subject, input.Body.Trim(), siteName, ct);
+        if (!sent.Delivered)
+        {
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new { sent = false, message = sent.Error ?? "The reply could not be sent." });
+        }
+
+        message.RepliedAt = DateTime.UtcNow;
+        message.ReplyCount += 1;
+        message.IsRead = true;
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            sent = true,
+            repliedAt = message.RepliedAt,
+            replyCount = message.ReplyCount,
+            message = "Reply sent.",
+        });
+    }
+
     [HttpDelete("messages/{id:int}")]
     public async Task<ActionResult<object>> DeleteMessage(int id)
     {

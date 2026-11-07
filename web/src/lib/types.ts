@@ -232,6 +232,8 @@ export interface ContactMessage {
   emailDelivered: boolean
   deliveryError?: string
   createdAt: string
+  repliedAt?: string | null
+  replyCount: number
 }
 
 export interface AdminUser {

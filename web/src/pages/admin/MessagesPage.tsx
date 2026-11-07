@@ -6,10 +6,11 @@ import { pushToast } from '@/store/uiSlice'
 import { AdminCard, AdminPageHeader, AdminToolbar } from '@/components/admin/AdminUI'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
-import { Field, Select, TextInput } from '@/components/ui/Field'
+import { Field, Select, TextArea, TextInput } from '@/components/ui/Field'
 import { Chip, type Accent } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/Feedback'
+import { api, endpoints, errorMessage } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
 import type { ContactMessage } from '@/lib/types'
@@ -39,6 +40,9 @@ export default function MessagesPage() {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState<ContactMessage | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ContactMessage | null>(null)
+  const [reply, setReply] = useState<{ message: ContactMessage; subject: string; body: string } | null>(null)
+  const [replySending, setReplySending] = useState(false)
+  const [replyError, setReplyError] = useState<string>()
 
   useEffect(() => {
     dispatch(loadMessages())
@@ -65,6 +69,40 @@ export default function MessagesPage() {
   const openMessage = (message: ContactMessage) => {
     setOpen(message)
     if (!message.isRead) dispatch(markMessageRead({ id: message.id, read: true }))
+  }
+
+  const startReply = (message: ContactMessage) => {
+    setOpen(null)
+    setReplyError(undefined)
+    setReply({
+      message,
+      subject: `Re: ${message.subject ?? 'Your enquiry to Albaik'}`,
+      body: `Hello ${message.name},\n\n`,
+    })
+  }
+
+  const sendReply = async () => {
+    if (!reply) return
+    if (!reply.body.trim()) {
+      setReplyError('Write a reply before sending.')
+      return
+    }
+
+    setReplySending(true)
+    setReplyError(undefined)
+    try {
+      await api.post(endpoints.admin.messageReply(reply.message.id), {
+        subject: reply.subject,
+        body: reply.body,
+      })
+      dispatch(loadMessages())
+      dispatch(pushToast({ tone: 'success', title: 'Reply sent' }))
+      setReply(null)
+    } catch (error) {
+      setReplyError(errorMessage(error, 'The reply could not be sent.'))
+    } finally {
+      setReplySending(false)
+    }
   }
 
   const onDelete = async () => {
@@ -196,6 +234,7 @@ export default function MessagesPage() {
                       {!message.emailDelivered && message.kind !== 'newsletter' ? (
                         <Chip accent="danger">Not emailed</Chip>
                       ) : null}
+                      {message.replyCount > 0 ? <Chip accent="teal">Replied</Chip> : null}
                     </span>
                     <span className="truncate text-body-sm text-on-surface-variant">{message.message}</span>
                     <span className="text-label-sm text-on-surface-variant/70">
@@ -238,15 +277,7 @@ export default function MessagesPage() {
               Close
             </Button>
             {open ? (
-              <Button
-                variant="primary"
-                icon="mail"
-                onClick={() => {
-                  window.location.href = `mailto:${open.email}?subject=${encodeURIComponent(
-                    `Re: ${open.subject ?? 'Your enquiry to Albaik'}`,
-                  )}`
-                }}
-              >
+              <Button variant="primary" icon="mail" onClick={() => startReply(open)}>
                 Reply by email
               </Button>
             ) : null}
@@ -264,7 +295,14 @@ export default function MessagesPage() {
                 { label: 'Phone', value: open.phone ?? '—' },
                 {
                   label: 'Email delivery',
-                  value: open.emailDelivered ? 'Delivered to your inbox' : 'Not delivered — see settings',
+                  value: open.emailDelivered ? 'Delivered to your inbox' : 'Not delivered - see settings',
+                },
+                {
+                  label: 'Replies',
+                  value:
+                    open.replyCount > 0
+                      ? `${open.replyCount} - last ${formatDate(open.repliedAt!, true)}`
+                      : 'No replies yet',
                 },
               ].map((row) => (
                 <div key={row.label} className="flex flex-col rounded-xl bg-surface-container-low p-space-sm">
@@ -320,6 +358,73 @@ export default function MessagesPage() {
                 Mark as {open.isRead ? 'unread' : 'read'}
               </Button>
             </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* ---------------------------------------------------------- reply composer */}
+      <Modal
+        open={Boolean(reply)}
+        onClose={() => {
+          if (!replySending) setReply(null)
+        }}
+        title={reply ? `Reply to ${reply.message.name}` : undefined}
+        description={reply?.message.email}
+        size="lg"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setReply(null)} disabled={replySending}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon="send"
+              loading={replySending}
+              disabled={!reply?.body.trim()}
+              onClick={sendReply}
+            >
+              Send reply
+            </Button>
+          </>
+        }
+      >
+        {reply ? (
+          <div className="flex flex-col gap-space-md">
+            <div className="rounded-xl border-l-[3px] border-secondary bg-surface-container-low p-space-sm">
+              <p className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                Original message
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-body-sm leading-relaxed text-on-surface">
+                {reply.message.message}
+              </p>
+            </div>
+
+            <Field label="To">
+              <TextInput value={reply.message.email} readOnly />
+            </Field>
+
+            <Field label="Subject" htmlFor="reply-subject">
+              <TextInput
+                id="reply-subject"
+                value={reply.subject}
+                onChange={(event) => setReply({ ...reply, subject: event.target.value })}
+              />
+            </Field>
+
+            <Field
+              label="Message"
+              htmlFor="reply-body"
+              hint="Sent through your configured SMTP mailbox with the full Albaik email template."
+            >
+              <TextArea
+                id="reply-body"
+                rows={10}
+                value={reply.body}
+                onChange={(event) => setReply({ ...reply, body: event.target.value })}
+              />
+            </Field>
+
+            {replyError ? <p className="text-body-sm text-error">{replyError}</p> : null}
           </div>
         ) : null}
       </Modal>
