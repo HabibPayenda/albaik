@@ -88,6 +88,15 @@ internal static class SqliteSourceReader
         var tableName = entityType.GetTableName()
             ?? throw new ImportSourceException($"Entity type '{entityType.ClrType.Name}' is not mapped to a table.");
 
+        if (!await TableExistsAsync(connection, tableName, cancellationToken))
+        {
+            // A table added after the source file was written simply has no rows to
+            // carry over; its target table is created by the migrations.
+            return new SourceTable(
+                entityType, tableName, new List<object>(),
+                ContentChecksum.Compute(entityType, Array.Empty<object>()));
+        }
+
         var keyProperties = entityType.FindPrimaryKey()?.Properties.ToArray()
             ?? throw new ImportSourceException($"Table '{tableName}' has no primary key to preserve.");
 
@@ -175,6 +184,18 @@ internal static class SqliteSourceReader
         }
 
         return new SourceTable(entityType, tableName, rows, ContentChecksum.Compute(entityType, rows));
+    }
+
+    private static async Task<bool> TableExistsAsync(
+        SqliteConnection connection, string tableName, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name LIMIT 1";
+        command.Parameters.AddWithValue("$name", tableName);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is not null;
     }
 
     private static async Task<HashSet<string>> ReadColumnNamesAsync(

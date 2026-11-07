@@ -287,6 +287,52 @@ namespace Albaik.Api.Migrations
                     b.ToTable("ContactMessages");
                 });
 
+            modelBuilder.Entity("Albaik.Api.Models.ContactMessageReply", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("ContactMessageId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FromAddress")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasPrecision(6)
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("ToAddress")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("varchar(320)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactMessageId");
+
+                    b.ToTable("ContactMessageReplies");
+                });
+
             modelBuilder.Entity("Albaik.Api.Models.FooterLink", b =>
                 {
                     b.Property<int>("Id")
@@ -926,6 +972,17 @@ namespace Albaik.Api.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("Albaik.Api.Models.ContactMessageReply", b =>
+                {
+                    b.HasOne("Albaik.Api.Models.ContactMessage", "ContactMessage")
+                        .WithMany("Replies")
+                        .HasForeignKey("ContactMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ContactMessage");
+                });
+
             modelBuilder.Entity("Albaik.Api.Models.Product", b =>
                 {
                     b.HasOne("Albaik.Api.Models.Brand", "Brand")
@@ -966,6 +1023,11 @@ namespace Albaik.Api.Migrations
                     b.Navigation("Brands");
 
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Albaik.Api.Models.ContactMessage", b =>
+                {
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("Albaik.Api.Models.Product", b =>

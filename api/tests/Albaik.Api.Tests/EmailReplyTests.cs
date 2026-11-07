@@ -96,6 +96,12 @@ public class EmailReplyTests
         Assert.Contains("Original question about wholesale pricing.", Html(sent), StringComparison.Ordinal);
         AssertBranded(sent, "Albaik Group of Companies");
 
+        var replies = await admin.GetFromJsonAsync<List<ContactMessageReplyDto>>(
+            $"/api/admin/messages/{message.Id}/replies");
+        var sentReply = Assert.Single(replies!);
+        Assert.Equal("Re: Wholesale enquiry", sentReply.Subject);
+        Assert.Contains("wholesale team", sentReply.Body, StringComparison.OrdinalIgnoreCase);
+
         var refreshed = await admin.GetFromJsonAsync<AdminMessageList>("/api/admin/messages");
         var updated = Assert.Single(refreshed!.Items, item => item.Id == message.Id);
         Assert.Equal(1, updated.ReplyCount);
@@ -156,13 +162,12 @@ public class EmailReplyTests
     private static void AssertBranded(MimeMessage message, string brand)
     {
         var html = Html(message);
-        Assert.Contains("cid:albaik-logo", html, StringComparison.Ordinal);
+        Assert.Contains("https://albaik.test/brand/email-logo-white.png", html, StringComparison.Ordinal);
         Assert.Contains(brand, html, StringComparison.Ordinal);
         Assert.Contains("The Mark of Pure Perfection", html, StringComparison.Ordinal);
         Assert.Contains("linear-gradient(135deg,#050d24", html, StringComparison.Ordinal);
-        Assert.True(
-            message.BodyParts.Any(part => part.ContentType.IsMimeType("image", "png")),
-            "the logo must travel with the message as an embedded PNG");
+        Assert.Contains("https://albaik.test/brand/email-avatar.png", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(message.BodyParts, part => part.ContentType.IsMimeType("image", "png"));
     }
 
     private static string Html(MimeMessage message) =>
@@ -183,6 +188,7 @@ public sealed class RecordingEmailFactory : AlbaikApiFactory
     {
         base.ConfigureWebHost(builder);
         builder.UseSetting("Smtp:NotifyAddress", "inbox@albaik.test");
+        builder.UseSetting("Smtp:PublicUrl", "https://albaik.test");
         builder.UseSetting("Smtp:FromAddress", "no-reply@albaik.test");
         builder.UseSetting("Smtp:FromName", "Albaik Group of Companies");
         builder.ConfigureTestServices(services =>

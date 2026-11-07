@@ -301,8 +301,9 @@ internal static class SqliteImportFixtureBuilder
                 ["TrustPillars"] = 2,
                 ["HairProfiles"] = 2,
                 ["Pages"] = 2,
-                ["ContactMessages"] = 2,
-                ["AdminUsers"] = 1,
+            ["ContactMessages"] = 2,
+            ["ContactMessageReplies"] = 0,
+            ["AdminUsers"] = 1,
             });
     }
 

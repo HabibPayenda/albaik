@@ -176,4 +176,21 @@ public class ContactMessage
     public DateTime? RepliedAt { get; set; }
     /// <summary>How many dashboard replies have been sent for this enquiry.</summary>
     public int ReplyCount { get; set; }
+    /// <summary>The replies sent from the dashboard, oldest first.</summary>
+    public List<ContactMessageReply> Replies { get; set; } = new();
+}
+
+/// <summary>One reply sent from the dashboard to the person who submitted an enquiry.</summary>
+public class ContactMessageReply
+{
+    public int Id { get; set; }
+    public int ContactMessageId { get; set; }
+    public ContactMessage? ContactMessage { get; set; }
+    public string Subject { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string FromAddress { get; set; } = "";
+    public string ToAddress { get; set; } = "";
+    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    /// <summary>"dashboard" today; reserved for a future mailbox sync.</summary>
+    public string Source { get; set; } = "dashboard";
 }

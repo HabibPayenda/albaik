@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/Feedback'
 import { api, endpoints, errorMessage } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
-import type { ContactMessage } from '@/lib/types'
+import type { ContactMessage, ContactMessageReply } from '@/lib/types'
 
 const KIND_LABEL: Record<string, string> = {
   contact: 'General',
@@ -43,10 +43,37 @@ export default function MessagesPage() {
   const [reply, setReply] = useState<{ message: ContactMessage; subject: string; body: string } | null>(null)
   const [replySending, setReplySending] = useState(false)
   const [replyError, setReplyError] = useState<string>()
+  const [replies, setReplies] = useState<ContactMessageReply[]>([])
+  const [repliesLoading, setRepliesLoading] = useState(false)
 
   useEffect(() => {
     dispatch(loadMessages())
   }, [dispatch])
+
+  useEffect(() => {
+    if (!open) {
+      setReplies([])
+      return
+    }
+
+    let alive = true
+    setRepliesLoading(true)
+    api
+      .get<ContactMessageReply[]>(endpoints.admin.messageReplies(open.id))
+      .then(({ data }) => {
+        if (alive) setReplies(data)
+      })
+      .catch(() => {
+        if (alive) setReplies([])
+      })
+      .finally(() => {
+        if (alive) setRepliesLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [open?.id])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -97,7 +124,9 @@ export default function MessagesPage() {
       })
       dispatch(loadMessages())
       dispatch(pushToast({ tone: 'success', title: 'Reply sent' }))
+      const sentTo = reply.message
       setReply(null)
+      setOpen(sentTo)
     } catch (error) {
       setReplyError(errorMessage(error, 'The reply could not be sent.'))
     } finally {
@@ -323,6 +352,39 @@ export default function MessagesPage() {
 
             <div className="rounded-xl border-l-[3px] border-secondary bg-surface-container-low p-space-md">
               <p className="whitespace-pre-wrap text-body-md leading-relaxed text-on-surface">{open.message}</p>
+            </div>
+
+            <div className="flex flex-col gap-space-sm">
+              <p className="text-label-md font-semibold uppercase tracking-wider text-on-surface-variant">
+                Conversation
+              </p>
+              {repliesLoading ? (
+                <div className="skeleton h-16 w-full rounded-xl" />
+              ) : replies.length ? (
+                replies.map((reply) => (
+                  <div
+                    key={reply.id}
+                    className="rounded-xl border border-outline-variant/40 bg-water-foam/40 p-space-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-body-sm font-semibold text-on-surface">{reply.subject}</span>
+                      <span className="text-label-sm text-on-surface-variant/70">
+                        {formatDate(reply.sentAt, true)}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-body-sm leading-relaxed text-on-surface">
+                      {reply.body}
+                    </p>
+                    <p className="mt-2 text-label-sm text-on-surface-variant/70">
+                      Sent from the dashboard to {reply.toAddress}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-body-sm text-on-surface-variant">
+                  No replies yet. Use <strong>Reply by email</strong> to send one; it will appear here.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-space-sm">

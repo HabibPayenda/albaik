@@ -615,7 +615,21 @@ private static string? ValidateSearchSuggestions(string? value)
                 new { sent = false, message = sent.Error ?? "The reply could not be sent." });
         }
 
-        message.RepliedAt = DateTime.UtcNow;
+        var reply = new ContactMessageReply
+        {
+            ContactMessageId = message.Id,
+            Subject = subject,
+            Body = input.Body.Trim(),
+            FromAddress = _config["Smtp:FromAddress"] is { Length: > 0 } from
+                ? from
+                : _config["Smtp:Username"] ?? "no-reply@albaik-group.com",
+            ToAddress = message.Email,
+            SentAt = DateTime.UtcNow,
+            Source = "dashboard",
+        };
+        _db.ContactMessageReplies.Add(reply);
+
+        message.RepliedAt = reply.SentAt;
         message.ReplyCount += 1;
         message.IsRead = true;
         await _db.SaveChangesAsync(ct);
@@ -625,8 +639,23 @@ private static string? ValidateSearchSuggestions(string? value)
             sent = true,
             repliedAt = message.RepliedAt,
             replyCount = message.ReplyCount,
+            reply = reply.ToDto(),
             message = "Reply sent.",
         });
+    }
+
+    [HttpGet("messages/{id:int}/replies")]
+    public async Task<ActionResult<List<ContactMessageReplyDto>>> MessageReplies(int id)
+    {
+        if (!await _db.ContactMessages.AnyAsync(message => message.Id == id))
+            return NotFound(new { message = "Message not found." });
+
+        var replies = await _db.ContactMessageReplies.AsNoTracking()
+            .Where(reply => reply.ContactMessageId == id)
+            .OrderBy(reply => reply.SentAt)
+            .ToListAsync();
+
+        return replies.Select(reply => reply.ToDto()).ToList();
     }
 
     [HttpDelete("messages/{id:int}")]

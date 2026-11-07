@@ -71,8 +71,6 @@ public class SmtpEmailSender : IEmailSender
     private readonly IConfiguration _config;
     private readonly ILogger<SmtpEmailSender> _log;
 
-    private static readonly byte[] LogoBytes = LoadLogo();
-
     public SmtpEmailSender(
         IEmailTransport transport,
         AppDbContext db,
@@ -165,14 +163,21 @@ public class SmtpEmailSender : IEmailSender
         .Select(item => (item.Label, item.Url))
         .ToList();
 
+        var website = PublicSiteUrl.Normalize(settings.GetValueOrDefault("site.publicBaseUrl"))
+            ?? Blank((_config["Smtp:PublicUrl"] ?? "").Trim().TrimEnd('/'));
+        var logoUrl = website is null ? null : website + "/brand/email-logo-white.png";
+        var avatarUrl = website is null ? null : website + "/brand/email-avatar.png";
+
         return new EmailBrand(
             Value("site.name", fallbackName),
             Value("site.tagline", "The Mark of Pure Perfection"),
-            PublicSiteUrl.Normalize(settings.GetValueOrDefault("site.publicBaseUrl")),
+            website,
             Blank(Value("contact.email")),
             Blank(Value("contact.phone")),
             Blank(Value("contact.address")),
-            social);
+            social,
+            logoUrl,
+            avatarUrl);
     }
 
     private async Task<EmailResult> SendAsync(
@@ -211,15 +216,6 @@ public class SmtpEmailSender : IEmailSender
                 TextBody = content.Text,
             };
 
-            // The logo travels inside the message, so it renders even when the recipient
-            // has not allowed remote images or the website is temporarily unreachable.
-            if (LogoBytes.Length > 0)
-            {
-                var logo = builder.LinkedResources.Add(
-                    "albaik-logo.png", LogoBytes, new ContentType("image", "png"));
-                logo.ContentId = EmailTemplate.LogoContentId;
-            }
-
             message.Body = builder.ToMessageBody();
             await _transport.SendAsync(message, ct);
 
@@ -237,19 +233,4 @@ public class SmtpEmailSender : IEmailSender
         subject.Replace('\r', ' ').Replace('\n', ' ').Trim();
 
     private static string? Blank(string value) => value.Length == 0 ? null : value;
-
-    private static byte[] LoadLogo()
-    {
-        var assembly = typeof(SmtpEmailSender).Assembly;
-        var resource = assembly.GetManifestResourceNames()
-            .FirstOrDefault(name => name.EndsWith("email-logo-white.png", StringComparison.OrdinalIgnoreCase));
-        if (resource is null) return Array.Empty<byte>();
-
-        using var stream = assembly.GetManifestResourceStream(resource);
-        if (stream is null) return Array.Empty<byte>();
-
-        using var buffer = new MemoryStream();
-        stream.CopyTo(buffer);
-        return buffer.ToArray();
-    }
 }
