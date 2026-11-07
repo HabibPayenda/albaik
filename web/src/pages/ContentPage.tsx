@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { api, endpoints, errorMessage } from '@/lib/api'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { Container, PageHero } from '@/components/ui/Layout'
+import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
 import { StructuredPage, layoutForSlug } from '@/components/content/StructuredPage'
 import type { Page } from '@/lib/types'
@@ -19,7 +20,9 @@ import type { Page } from '@/lib/types'
 export function ContentPage({ slugOverride }: { slugOverride?: string }) {
   const { pageSlug = '' } = useParams()
   const slug = slugOverride ?? pageSlug
+  const location = useLocation()
   const settings = useSiteSettings()
+  const isGuide = !slugOverride && location.pathname.startsWith('/guides/')
 
   const [page, setPage] = useState<Page | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -65,6 +68,25 @@ export function ContentPage({ slugOverride }: { slugOverride?: string }) {
 
   return (
     <>
+      <div className="w-full border-b border-outline-variant/30 bg-surface-container-lowest">
+        <Container className="py-3">
+          <Breadcrumb
+            items={
+              isGuide
+                ? [
+                    { label: 'Home', to: '/' },
+                    { label: 'Guides' },
+                    { label: page.title },
+                  ]
+                : [
+                    { label: 'Home', to: '/' },
+                    { label: page.title },
+                  ]
+            }
+          />
+        </Container>
+      </div>
+
       <PageHero eyebrow={page.eyebrow} title={page.title} subtitle={page.subtitle} />
       <StructuredPage page={page} mode={layoutForSlug(page.slug)} />
     </>

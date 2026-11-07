@@ -59,15 +59,16 @@ public static class ProductPageShell
         var imageWidth = usingFallback ? OpenGraphFallbackWidth : ProductImageWidth;
         var imageHeight = usingFallback ? OpenGraphFallbackHeight : ProductImageHeight;
 
-        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new (string, string?)[]
+        var crumbs = new SeoCrumb[]
         {
-            ("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
-            ("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),
-            (product.Category.Name, SeoUrl.Absolute(site.BaseUrl, $"/collections/{product.Category.Slug}")),
-            (product.Brand.Name, SeoUrl.Absolute(
+            new("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
+            new("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),
+            new(product.Category.Name, SeoUrl.Absolute(site.BaseUrl, $"/collections/{product.Category.Slug}")),
+            new(product.Brand.Name, SeoUrl.Absolute(
                 site.BaseUrl, $"/collections/{product.Category.Slug}/{product.Brand.Slug}")),
-            (product.Name, canonicalUrl),
-        });
+            new(product.Name, canonicalUrl),
+        };
+        var breadcrumb = SeoBreadcrumb.JsonLd(canonicalUrl, crumbs);
 
         var productNode = SeoJsonLd.Product(
             canonicalUrl,
@@ -99,7 +100,7 @@ public static class ProductPageShell
             imageHeight,
             product.Name,
             structuredData,
-            BuildContentHtml(product, imageUrl));
+            BuildContentHtml(product, imageUrl, crumbs));
     }
 
     /// <summary>
@@ -112,13 +113,15 @@ public static class ProductPageShell
             ? SeoText.ComposeDescription(product.ShortDescription, product.Description)
             : SeoText.ComposeDescription(product.MetaDescription);
 
-    private static string BuildContentHtml(Product product, string imageUrl)
+    private static string BuildContentHtml(
+        Product product, string imageUrl, IReadOnlyList<SeoCrumb> crumbs)
     {
         var brand = product.Brand!;
         var category = product.Category!;
 
         var sb = new StringBuilder();
         sb.Append("<div class=\"seo-product\">");
+        sb.Append(SeoBreadcrumb.Html(crumbs));
 
         sb.Append("<header>");
         sb.Append("<h1>").Append(SeoHtml.Text(product.Name)).Append("</h1>");

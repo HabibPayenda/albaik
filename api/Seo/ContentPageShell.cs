@@ -39,9 +39,10 @@ public static class ContentPageShell
             string.IsNullOrWhiteSpace(page.MetaDescription) ? page.Subtitle : page.MetaDescription);
         var title = $"{page.Title} — Albaik";
 
+        var crumbs = Crumbs(site, canonicalUrl, page, isGuide);
         var structuredData = SeoJsonLd.Graph(
             SeoJsonLd.SiteNodes(site)
-                .Concat(new object[] { Breadcrumb(site, canonicalUrl, page, isGuide) })
+                .Concat(new object[] { SeoBreadcrumb.JsonLd(canonicalUrl, crumbs) })
                 .ToArray());
 
         return new SeoPage(
@@ -58,32 +59,35 @@ public static class ContentPageShell
             OpenGraphImageSize,
             page.Title,
             structuredData,
-            BuildContentHtml(page));
+            BuildContentHtml(page, crumbs));
     }
 
-    private static Dictionary<string, object?> Breadcrumb(
+    private static SeoCrumb[] Crumbs(
         SiteSettingsSnapshot site, string canonicalUrl, Page page, bool isGuide)
     {
         var home = SeoUrl.Absolute(site.BaseUrl, "/");
         if (isGuide)
         {
-            return SeoJsonLd.BreadcrumbList(
-                canonicalUrl,
-                ("Home", home),
-                ("Guides", null),
-                (page.Title, canonicalUrl));
+            return new SeoCrumb[]
+            {
+                new("Home", home),
+                new("Guides", null),
+                new(page.Title, canonicalUrl),
+            };
         }
 
-        return SeoJsonLd.BreadcrumbList(
-            canonicalUrl,
-            ("Home", home),
-            (page.Title, canonicalUrl));
+        return new SeoCrumb[]
+        {
+            new("Home", home),
+            new(page.Title, canonicalUrl),
+        };
     }
 
-    private static string BuildContentHtml(Page page)
+    private static string BuildContentHtml(Page page, IReadOnlyList<SeoCrumb> crumbs)
     {
         var sb = new StringBuilder();
         sb.Append("<div class=\"seo-content-page\">");
+        sb.Append(SeoBreadcrumb.Html(crumbs));
 
         sb.Append("<header>");
         if (!string.IsNullOrWhiteSpace(page.Eyebrow))

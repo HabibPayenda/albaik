@@ -47,6 +47,9 @@ public class ContentShellTests : IClassFixture<AlbaikApiFactory>
         Assert.Equal(new[] { "Home", page.Title }, items.Select(item => Str(item, "name")));
         Assert.Equal("http://localhost/", Str(items[0], "item"));
         Assert.Equal("http://localhost/about", Str(items[1], "item"));
+        Assert.Equal(
+            items.Select(item => Str(item, "item")!),
+            SeoShellTestHelpers.NavHrefs(html, "Breadcrumb"));
 
         Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(
             html, "<h1\\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Count);
@@ -76,6 +79,9 @@ public class ContentShellTests : IClassFixture<AlbaikApiFactory>
         Assert.Equal("http://localhost/", Str(items[0], "item"));
         Assert.False(items[1].TryGetProperty("item", out _));
         Assert.Equal("http://localhost/guides/shampoo-guide", Str(items[2], "item"));
+        Assert.Equal(
+            items.Select(item => Str(item, "item")).Where(url => url is not null).Select(url => url!),
+            SeoShellTestHelpers.NavHrefs(html, "Breadcrumb"));
 
         Assert.True(ContainsHtmlText(html, "Dandruff"));
     }

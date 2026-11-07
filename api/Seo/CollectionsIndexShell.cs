@@ -48,6 +48,7 @@ public static class CollectionsIndexShell
 
         var products = await QueryProductsAsync(db, categorySlug, brandSlug, search, page, ct);
         var total = await CountProductsAsync(db, categorySlug, brandSlug, search, ct);
+        var totalPages = (total + PageSize - 1) / PageSize;
 
         var hasSearch = search.Length > 0;
         var hasBrand = brandSlug.Length > 0;
@@ -88,7 +89,16 @@ public static class CollectionsIndexShell
             OpenGraphImageSize,
             site.Name,
             structuredData,
-            BuildContentHtml(categories, products, total, activeCategory, search, page),
+            BuildContentHtml(
+                categories,
+                products,
+                total,
+                totalPages,
+                activeCategory,
+                categorySlug,
+                brandSlug,
+                search,
+                page),
             robots);
     }
 
@@ -144,7 +154,10 @@ public static class CollectionsIndexShell
         List<Category> categories,
         List<Product> products,
         int total,
+        int totalPages,
         Category? activeCategory,
+        string categorySlug,
+        string brandSlug,
         string search,
         int page)
     {
@@ -241,12 +254,59 @@ public static class CollectionsIndexShell
             }
         }
 
-        if (page > 1)
-            sb.Append("<p>Page ").Append(page.ToString(CultureInfo.InvariantCulture)).Append("</p>");
-
         sb.Append("</section>");
+
+        AppendPagination(sb, totalPages, categorySlug, brandSlug, search, page);
+
         sb.Append("</div>");
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Real <c>&lt;a href&gt;</c> pagination that works without JavaScript. It follows
+    /// the same query contract as the SPA and the canonical builder (only
+    /// <c>category</c>, <c>brand</c>, <c>search</c> and <c>page</c>), so a crawler can
+    /// walk the catalogue and each link stays on the address the page canonicalises to.
+    /// </summary>
+    private static void AppendPagination(
+        StringBuilder sb,
+        int totalPages,
+        string categorySlug,
+        string brandSlug,
+        string search,
+        int page)
+    {
+        if (totalPages <= 1) return;
+
+        sb.Append("<nav class=\"seo-pagination\" aria-label=\"Pagination\"><ol>");
+
+        if (page > 1)
+            AppendPage(sb, "Previous", page - 1, false, categorySlug, brandSlug, search);
+
+        for (var target = 1; target <= totalPages; target++)
+            AppendPage(sb, target.ToString(CultureInfo.InvariantCulture), target,
+                target == page, categorySlug, brandSlug, search);
+
+        if (page < totalPages)
+            AppendPage(sb, "Next", page + 1, false, categorySlug, brandSlug, search);
+
+        sb.Append("</ol></nav>");
+    }
+
+    private static void AppendPage(
+        StringBuilder sb,
+        string label,
+        int targetPage,
+        bool isCurrent,
+        string categorySlug,
+        string brandSlug,
+        string search)
+    {
+        sb.Append("<li><a href=\"")
+            .Append(SeoHtml.SafeHref(SelfPath(categorySlug, brandSlug, search, targetPage)))
+            .Append('"');
+        if (isCurrent) sb.Append(" aria-current=\"page\"");
+        sb.Append('>').Append(SeoHtml.Text(label)).Append("</a></li>");
     }
 
     /// <summary>
