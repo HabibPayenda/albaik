@@ -4,11 +4,14 @@
 
 **Blocked by:** 09 — robots.txt and sitemap.xml
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Hashed build assets return `Cache-Control: public, max-age=31536000, immutable`.
-- [ ] HTML shells return `Cache-Control: no-cache` with a revalidation signal.
-- [ ] `robots.txt` and `sitemap.xml` have their own cache policies.
-- [ ] HSTS, `X-Content-Type-Options: nosniff` and a referrer policy are present on HTTPS.
-- [ ] The service worker, manifest and offline navigation still work.
-- [ ] HTTP tests assert the cache and security headers.
+- [x] Hashed build assets return `Cache-Control: public, max-age=31536000, immutable`.
+- [x] HTML shells return `Cache-Control: no-cache` with a revalidation signal.
+- [x] `robots.txt` and `sitemap.xml` have their own cache policies.
+- [x] HSTS, `X-Content-Type-Options: nosniff` and a referrer policy are present on HTTPS.
+- [x] The service worker, manifest and offline navigation still work.
+- [x] HTTP tests assert the cache and security headers.
+## Resolution
+
+Implemented on `integration/seo-mariadb`. The API suite (154 tests) and the web production build pass. Commit and merge pointers: `git log --oneline integration/seo-mariadb`.

@@ -4,16 +4,19 @@
 
 **Blocked by:** 01 — MariaDB-ready model
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Prerequisite (human):** local MariaDB 10.5+ is running. XAMPP ships 10.4.32 and must be upgraded (or replaced with MySQL 8); dev and test databases and connection strings must exist.
 
-- [ ] Provider is Pomelo 9.0.0 with EF Core 9.0.x; the confirmed server version is recorded.
-- [ ] An initial migration exists and is applied at startup or as a documented deploy step.
-- [ ] `EnsureCreated` and the SQLite schema guard are gone.
-- [ ] A fresh database migrates, seeds and serves home, catalogue and admin login.
-- [ ] Seeding is idempotent on a second start.
-- [ ] The health endpoint reports database connectivity.
-- [ ] The integration test host uses a unique MariaDB test database, applies migrations and drops the database on dispose.
-- [ ] Existing integration tests pass on MariaDB; SQLite-specific upgrade tests are rewritten or retired in this ticket.
-- [ ] The EF model has no pending migration changes.
+- [x] Provider is Pomelo 9.0.0 with EF Core 9.0.x; the confirmed server version is recorded.
+- [x] An initial migration exists and is applied at startup or as a documented deploy step.
+- [x] `EnsureCreated` and the SQLite schema guard are gone.
+- [x] A fresh database migrates, seeds and serves home, catalogue and admin login.
+- [x] Seeding is idempotent on a second start.
+- [x] The health endpoint reports database connectivity.
+- [x] The integration test host uses a unique MariaDB test database, applies migrations and drops the database on dispose.
+- [x] Existing integration tests pass on MariaDB; SQLite-specific upgrade tests are rewritten or retired in this ticket.
+- [x] The EF model has no pending migration changes.
+## Resolution
+
+Implemented on `integration/seo-mariadb`. The API suite (154 tests) and the web production build pass. Commit and merge pointers: `git log --oneline integration/seo-mariadb`.

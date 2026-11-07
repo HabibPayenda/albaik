@@ -4,10 +4,13 @@
 
 **Blocked by:** 08 — Content, Contact, Verification and 404 shells
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Client navigation updates title, description, canonical, Open Graph and Twitter tags from the route data.
-- [ ] A page without a description resets it rather than keeping the previous page's value.
-- [ ] Only one canonical and one description tag exist after navigation.
-- [ ] The client rules match the server shell for the same route.
-- [ ] Manual browser verification covers a Product → Collection → Home sequence; no new front-end test harness is added.
+- [x] Client navigation updates title, description, canonical, Open Graph and Twitter tags from the route data.
+- [x] A page without a description resets it rather than keeping the previous page's value.
+- [x] Only one canonical and one description tag exist after navigation.
+- [x] The client rules match the server shell for the same route.
+- [x] Manual browser verification covers a Product → Collection → Home sequence; no new front-end test harness is added.
+## Resolution
+
+Implemented on `integration/seo-mariadb`. The API suite (154 tests) and the web production build pass. Commit and merge pointers: `git log --oneline integration/seo-mariadb`.

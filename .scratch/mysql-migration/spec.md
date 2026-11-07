@@ -1,6 +1,6 @@
-﻿# SQLite to MariaDB (MySQL-compatible) Migration
+# SQLite to MariaDB (MySQL-compatible) Migration
 
-**Status:** ready-for-agent
+**Status:** implemented
 
 ## Problem Statement
 

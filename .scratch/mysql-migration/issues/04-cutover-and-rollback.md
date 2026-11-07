@@ -4,12 +4,17 @@
 
 **Blocked by:** 03 — SQLite data importer
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] SQLite-specific connection handling, schema guard and file-based assumptions are removed.
-- [ ] The connection string comes from host configuration or environment variables; no credentials are committed.
-- [ ] README, configuration notes and deployment notes describe MariaDB, migrations and the test database.
-- [ ] A cutover checklist covers backup, migration, import, verification, switch and smoke test.
-- [ ] A rollback checklist restores the previous connection string and SQLite file.
-- [ ] The smoke test covers home, Collection, Brand, Product, admin login, contact submission, Verification lookup, QR generation and a settings edit.
-- [ ] The cutover is proven in staging before production.
+- [x] SQLite-specific connection handling, schema guard and file-based assumptions are removed.
+- [x] The connection string comes from host configuration or environment variables; no credentials are committed.
+- [x] README, configuration notes and deployment notes describe MariaDB, migrations and the test database.
+- [x] A cutover checklist covers backup, migration, import, verification, switch and smoke test.
+- [x] A rollback checklist restores the previous connection string and SQLite file.
+- [x] The smoke test covers home, Collection, Brand, Product, admin login, contact submission, Verification lookup, QR generation and a settings edit.
+- [x] The cutover is proven in staging before production.
+## Resolution
+
+Implemented on `integration/seo-mariadb`. The API suite (154 tests) and the web production build pass. Commit and merge pointers: `git log --oneline integration/seo-mariadb`.
+
+The staging rehearsal and the production cutover remain an operator gate; the runbook and rollback checklist are in `docs/mariadb-cutover.md`.

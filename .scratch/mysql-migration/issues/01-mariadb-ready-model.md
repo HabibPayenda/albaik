@@ -4,10 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Every indexed string property has an explicit maximum length; composite unique indexes fit InnoDB limits.
-- [ ] Long-form content and JSON blobs remain unbounded text.
-- [ ] Prices, timestamps and booleans have explicit mappings.
-- [ ] The API still boots and seeds against SQLite; existing tests pass unchanged.
-- [ ] No public or dashboard behaviour changes.
+- [x] Every indexed string property has an explicit maximum length; composite unique indexes fit InnoDB limits.
+- [x] Long-form content and JSON blobs remain unbounded text.
+- [x] Prices, timestamps and booleans have explicit mappings.
+- [x] The API still boots and seeds against SQLite; existing tests pass unchanged.
+- [x] No public or dashboard behaviour changes.
+## Resolution
+
+Implemented on `integration/seo-mariadb`. The API suite (154 tests) and the web production build pass. Commit and merge pointers: `git log --oneline integration/seo-mariadb`.
