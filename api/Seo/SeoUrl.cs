@@ -24,6 +24,23 @@ public static class SeoUrl
         if (!path.StartsWith('/')) path = "/" + path;
         return baseUrl + path;
     }
+
+    /// <summary>
+    /// An uploaded or bundled image URL as an absolute address. The catalogue stores
+    /// images as relative <c>/uploads/...</c> or <c>/products/...</c> paths, so the shell
+    /// converts them once here instead of at every tag, avoiding a mix of relative and
+    /// absolute social/JSON-LD images.
+    /// </summary>
+    public static string? Asset(string baseUrl, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var path = value.Trim();
+        if (Uri.TryCreate(path, UriKind.Absolute, out var uri))
+            return uri.Scheme is "http" or "https" ? path : null;
+
+        return Absolute(baseUrl, path);
+    }
 }
 
 /// <summary>

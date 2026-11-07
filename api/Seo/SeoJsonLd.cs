@@ -81,4 +81,87 @@ internal static class SeoJsonLd
         ["name"] = name,
         ["url"] = url,
     };
+
+    /// <summary>
+    /// The page's place in the catalogue hierarchy. Used on Brand and Product pages now
+    /// and, from ticket 13, wherever visible breadcrumbs are rendered. The final entry
+    /// is the current page, so its <c>item</c> is the canonical URL.
+    /// </summary>
+    public static Dictionary<string, object?> BreadcrumbList(
+        string canonicalUrl, IEnumerable<(string Name, string Url)> items)
+    {
+        var elements = items
+            .Select((item, index) => BreadcrumbItem(index + 1, item.Name, item.Url))
+            .ToArray();
+
+        return new Dictionary<string, object?>
+        {
+            ["@type"] = "BreadcrumbList",
+            ["@id"] = canonicalUrl + "#breadcrumb",
+            ["itemListElement"] = elements,
+        };
+    }
+
+    public static Dictionary<string, object?> BreadcrumbItem(int position, string name, string url) => new()
+    {
+        ["@type"] = "ListItem",
+        ["position"] = position,
+        ["name"] = name,
+        ["item"] = url,
+    };
+
+    /// <summary>
+    /// A Product node without offers, availability or reviews: prices are still
+    /// "Price on request", so an Offer would be false. <c>gtin13</c> is added only for a
+    /// valid EAN-13 IBN, because an invalid identifier is worse than none.
+    /// </summary>
+    public static Dictionary<string, object?> Product(
+        string canonicalUrl,
+        string name,
+        string imageUrl,
+        string description,
+        string brandName,
+        string categoryName,
+        string sku,
+        string? ibn)
+    {
+        var node = new Dictionary<string, object?>
+        {
+            ["@type"] = "Product",
+            ["@id"] = canonicalUrl + "#product",
+            ["name"] = name,
+            ["image"] = imageUrl,
+            ["description"] = description,
+            ["brand"] = new Dictionary<string, object?>
+            {
+                ["@type"] = "Brand",
+                ["name"] = brandName,
+            },
+            ["category"] = categoryName,
+            ["sku"] = sku,
+            ["url"] = canonicalUrl,
+        };
+
+        if (IsValidEan13(ibn)) node["gtin13"] = ibn!.Trim();
+        return node;
+    }
+
+    /// <summary>The EAN-13 check-digit rule (mod-10, alternating 1/3 weights).</summary>
+    public static bool IsValidEan13(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+
+        var digits = value.Trim();
+        if (digits.Length != 13 || !digits.All(char.IsAsciiDigit)) return false;
+
+        var sum = 0;
+        for (var index = 0; index < 12; index++)
+        {
+            var digit = digits[index] - '0';
+            sum += index % 2 == 0 ? digit : digit * 3;
+        }
+
+        var check = (10 - sum % 10) % 10;
+        return check == digits[12] - '0';
+    }
 }
