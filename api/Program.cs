@@ -24,6 +24,9 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<SeoRouteResolver>();
+// Crawl files are generated from the database and cached briefly per public origin.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<SeoFileGenerator>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<ImagePipeline>();
 builder.Services.AddSingleton<SeoShellRenderer>();

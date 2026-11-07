@@ -18,15 +18,8 @@ public sealed class SeoRouteResolver
 {
     private const string CollectionsPath = "/collections";
     private const string ProductsPath = "/products";
-    private const string GuidesPath = "/guides/";
-    private const string PagesPath = "/pages/";
     private const string VerifyPath = "/verify/";
     private const string ContactPath = "/contact";
-
-    private static readonly HashSet<string> NamedContentRoutes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "about", "quality", "safety", "distribution", "privacy", "terms",
-    };
 
     private readonly AppDbContext _db;
 
@@ -138,14 +131,18 @@ public sealed class SeoRouteResolver
         if (path.Length > 1)
         {
             var candidate = path[1..];
-            if (!candidate.Contains('/') && NamedContentRoutes.Contains(candidate))
+            if (!candidate.Contains('/') && ContentRoutes.IsNamed(candidate))
             {
                 slug = candidate.ToLowerInvariant();
                 return true;
             }
         }
 
-        foreach (var (prefix, guide) in new[] { (GuidesPath, true), (PagesPath, false) })
+        foreach (var (prefix, guide) in new[]
+                 {
+                     (ContentRoutes.GuidesPrefix, true),
+                     (ContentRoutes.PagesPrefix, false),
+                 })
         {
             if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
 
