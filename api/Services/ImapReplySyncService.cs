@@ -133,14 +133,22 @@ public sealed class ImapReplySyncService : BackgroundService
     {
         if (SentFolder is not null)
         {
-            var personal = client.GetFolder(client.PersonalNamespaces[0]);
-            var configured = personal.GetSubfolder(SentFolder);
-            if (configured is not null) return configured;
+            try
+            {
+                var personal = client.GetFolder(client.PersonalNamespaces[0]);
+                var configured = personal.GetSubfolder(SentFolder);
+                if (configured is not null) return configured;
+            }
+            catch (FolderNotFoundException)
+            {
+                // Fall through to the special-use folder / common names.
+            }
         }
 
         try
         {
-            return client.GetFolder(SpecialFolder.Sent);
+            var special = client.GetFolder(SpecialFolder.Sent);
+            if (special is not null) return special;
         }
         catch (Exception error) when (error is NotSupportedException or FolderNotFoundException)
         {
@@ -150,8 +158,15 @@ public sealed class ImapReplySyncService : BackgroundService
         var root = client.GetFolder(client.PersonalNamespaces[0]);
         foreach (var name in new[] { "Sent", "Sent Items", "Sent Messages" })
         {
-            var folder = root.GetSubfolder(name);
-            if (folder is not null) return folder;
+            try
+            {
+                var folder = root.GetSubfolder(name);
+                if (folder is not null) return folder;
+            }
+            catch (FolderNotFoundException)
+            {
+                // Try the next common name.
+            }
         }
 
         throw new InvalidOperationException(
