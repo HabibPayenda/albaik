@@ -136,4 +136,84 @@ public class MailboxReplyImportTests
         Assert.Contains("phone", reply.Body);
         Assert.DoesNotContain("<p>", reply.Body);
     }
+    [Fact]
+    public async Task CustomerReplyFromInbox_IsStoredAndMarksTheThreadUnread()
+    {
+        using var factory = new AlbaikApiFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var importer = scope.ServiceProvider.GetRequiredService<MailboxReplyImporter>();
+
+        var email = $"customer-{Guid.NewGuid():N}@example.com";
+        var contact = new ContactMessage
+        {
+            Name = "Customer",
+            Email = email,
+            Message = "Original website enquiry.",
+            Kind = "contact",
+            IsRead = true,
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+        };
+        db.ContactMessages.Add(contact);
+        await db.SaveChangesAsync();
+
+        var message = new MimeMessage
+        {
+            Subject = "Re: Your reply from Albaik",
+            InReplyTo = "<dashboard-reply@albaik.test>",
+            MessageId = MimeUtils.GenerateMessageId(),
+            Date = DateTimeOffset.UtcNow,
+        };
+        message.From.Add(MailboxAddress.Parse(email));
+        message.To.Add(MailboxAddress.Parse("inbox@albaik.test"));
+        message.Body = new TextPart("plain") { Text = "The customer replied from Gmail." };
+
+        Assert.True(await importer.ImportAsync(message, isInbound: true));
+        Assert.False(await importer.ImportAsync(message, isInbound: true));
+
+        var reply = await db.ContactMessageReplies.SingleAsync(item => item.ContactMessageId == contact.Id);
+        Assert.Equal("customer", reply.Source);
+        Assert.Equal(email, reply.FromAddress);
+        Assert.Equal("inbox@albaik.test", reply.ToAddress);
+        Assert.Equal("The customer replied from Gmail.", reply.Body);
+
+        var refreshed = await db.ContactMessages.FindAsync(contact.Id);
+        Assert.NotNull(refreshed);
+        Assert.Equal(1, refreshed!.CustomerReplyCount);
+        Assert.NotNull(refreshed.LastCustomerReplyAt);
+        Assert.Equal(0, refreshed.ReplyCount);
+        Assert.False(refreshed.IsRead);
+    }
+
+    [Fact]
+    public async Task InboundMailFromAnUnknownSender_IsNotImported()
+    {
+        using var factory = new AlbaikApiFactory();
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var importer = scope.ServiceProvider.GetRequiredService<MailboxReplyImporter>();
+
+        db.ContactMessages.Add(new ContactMessage
+        {
+            Name = "Known Visitor",
+            Email = "known@example.com",
+            Message = "An enquiry.",
+            Kind = "contact",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5),
+        });
+        await db.SaveChangesAsync();
+
+        var message = new MimeMessage
+        {
+            Subject = "Re: newsletter",
+            MessageId = MimeUtils.GenerateMessageId(),
+            Date = DateTimeOffset.UtcNow,
+        };
+        message.From.Add(MailboxAddress.Parse("unknown@example.com"));
+        message.To.Add(MailboxAddress.Parse("inbox@albaik.test"));
+        message.Body = new TextPart("plain") { Text = "Not from a known enquiry." };
+
+        Assert.False(await importer.ImportAsync(message, isInbound: true));
+        Assert.Empty(await db.ContactMessageReplies.ToListAsync());
+    }
 }

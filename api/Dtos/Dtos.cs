@@ -83,7 +83,7 @@ public record PageDto(int Id, string Slug, string Title, string? Subtitle, strin
     string? MetaDescription, int SortOrder, bool IsPublished, DateTime UpdatedAt);
 public record ContactMessageDto(int Id, string Name, string Email, string? Phone, string? Company, string? Subject,
     string Message, string Kind, bool IsRead, bool EmailDelivered, string? DeliveryError, DateTime CreatedAt,
-    DateTime? RepliedAt, int ReplyCount);
+    DateTime? RepliedAt, int ReplyCount, int CustomerReplyCount, DateTime? LastCustomerReplyAt);
 
 public record ContactMessageReplyDto(int Id, int ContactMessageId, string Subject, string Body,
     string FromAddress, string ToAddress, DateTime SentAt, string Source);

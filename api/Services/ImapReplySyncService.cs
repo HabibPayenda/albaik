@@ -44,6 +44,8 @@ public sealed class ImapReplySyncService : BackgroundService
     private int LookbackDays => int.TryParse(_config["Imap:LookbackDays"], out var days)
         ? Math.Clamp(days, 1, 365)
         : 14;
+    private bool SyncInbox => !bool.TryParse(_config["Imap:SyncInbox"], out var sync) || sync;
+    private bool SyncSent => !bool.TryParse(_config["Imap:SyncSent"], out var sync) || sync;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -52,6 +54,19 @@ public sealed class ImapReplySyncService : BackgroundService
             _log.LogInformation("IMAP reply sync is off: set Imap:Host, Imap:Username and Imap:Password to enable it.");
             return;
         }
+
+        var notify = Blank(_config["Smtp:NotifyAddress"]);
+        if (notify is not null && User is not null
+            && !string.Equals(notify, User, StringComparison.OrdinalIgnoreCase))
+        {
+            _log.LogWarning(
+                "Customer replies go to {Notify}, but IMAP syncs {User}. Make Smtp:NotifyAddress the IMAP mailbox, or sync the mailbox that receives the replies.",
+                notify, User);
+        }
+
+        _log.LogInformation(
+            "IMAP reply sync is on for {Host} every {Minutes} minute(s); inbox={Inbox}, sent={Sent}.",
+            Host, PollMinutes, SyncInbox, SyncSent);
 
         try
         {
@@ -96,9 +111,42 @@ public sealed class ImapReplySyncService : BackgroundService
         if (!string.IsNullOrWhiteSpace(User))
             await client.AuthenticateAsync(User!, Password ?? "", ct);
 
-        var folder = ResolveSentFolder(client);
-        await folder.OpenAsync(FolderAccess.ReadOnly, ct);
+        try
+        {
+            if (SyncInbox)
+            {
+                try
+                {
+                    await SyncFolderAsync(client, ResolveInboxFolder(client), isInbound: true, ct);
+                }
+                catch (Exception error) when (error is not OperationCanceledException)
+                {
+                    _log.LogWarning(error, "IMAP inbox sync failed; outbound sync will still run.");
+                }
+            }
 
+            if (SyncSent)
+            {
+                try
+                {
+                    await SyncFolderAsync(client, ResolveSentFolder(client), isInbound: false, ct);
+                }
+                catch (Exception error) when (error is not OperationCanceledException)
+                {
+                    _log.LogWarning(error, "IMAP Sent-folder sync failed; inbox sync still ran.");
+                }
+            }
+        }
+        finally
+        {
+            await client.DisconnectAsync(true, ct);
+        }
+    }
+
+    private async Task SyncFolderAsync(
+        ImapClient client, IMailFolder folder, bool isInbound, CancellationToken ct)
+    {
+        await folder.OpenAsync(FolderAccess.ReadOnly, ct);
         try
         {
             var since = DateTime.UtcNow.AddDays(-LookbackDays);
@@ -116,17 +164,40 @@ public sealed class ImapReplySyncService : BackgroundService
             {
                 ct.ThrowIfCancellationRequested();
                 var message = await folder.GetMessageAsync(uid, ct);
-                if (await importer.ImportAsync(message, ct)) imported += 1;
+                if (await importer.ImportAsync(message, isInbound, ct)) imported += 1;
             }
 
             if (imported > 0)
-                _log.LogInformation("IMAP reply sync imported {Count} phone replies.", imported);
+            {
+                _log.LogInformation(
+                    "IMAP {Direction} sync imported {Count} replies from {Folder}.",
+                    isInbound ? "inbox" : "sent", imported, folder.FullName);
+            }
         }
         finally
         {
             await folder.CloseAsync(false, ct);
-            await client.DisconnectAsync(true, ct);
         }
+    }
+
+    private IMailFolder ResolveInboxFolder(ImapClient client)
+    {
+        var configured = Blank(_config["Imap:InboxFolder"]);
+        if (configured is not null && !string.Equals(configured, "INBOX", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var personal = client.GetFolder(client.PersonalNamespaces[0]);
+                var folder = personal.GetSubfolder(configured);
+                if (folder is not null) return folder;
+            }
+            catch (FolderNotFoundException)
+            {
+                // Fall back to the server's INBOX.
+            }
+        }
+
+        return client.Inbox;
     }
 
     private IMailFolder ResolveSentFolder(ImapClient client)

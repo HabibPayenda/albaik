@@ -174,9 +174,13 @@ public class ContactMessage
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     /// <summary>When staff last replied from the dashboard; null until the first reply.</summary>
     public DateTime? RepliedAt { get; set; }
-    /// <summary>How many dashboard replies have been sent for this enquiry.</summary>
+    /// <summary>How many outbound staff replies have been sent for this enquiry.</summary>
     public int ReplyCount { get; set; }
-    /// <summary>The replies sent from the dashboard, oldest first.</summary>
+    /// <summary>How many replies the customer sent back after an outbound reply.</summary>
+    public int CustomerReplyCount { get; set; }
+    /// <summary>When the customer last replied; null until they do.</summary>
+    public DateTime? LastCustomerReplyAt { get; set; }
+    /// <summary>The replies in the conversation, oldest first.</summary>
     public List<ContactMessageReply> Replies { get; set; } = new();
 }
 
