@@ -10,6 +10,7 @@ import { ProductGrid, ResultsBar } from '@/components/ui/ProductGrid'
 import { ErrorState, PageLoader } from '@/components/ui/Feedback'
 import { Icon } from '@/components/ui/Icon'
 import { ButtonLink } from '@/components/ui/Button'
+import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { Stagger, StaggerItem } from '@/components/ui/Reveal'
 import { cn, plural } from '@/lib/utils'
 
@@ -108,6 +109,18 @@ export function CategoryPage() {
 
   return (
     <>
+      <div className="w-full border-b border-outline-variant/30 bg-surface-container-lowest">
+        <Container className="py-3">
+          <Breadcrumb
+            items={[
+              { label: 'Home', to: '/' },
+              { label: 'Collections', to: '/collections' },
+              { label: category.name },
+            ]}
+          />
+        </Container>
+      </div>
+
       <PageHero
         eyebrow={category.tagline}
         title={category.name}

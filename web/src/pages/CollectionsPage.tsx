@@ -92,6 +92,16 @@ export function CollectionsPage() {
   const clearAll = () => setParams(new URLSearchParams(), { replace: true })
   const hasFilters = Boolean(category || brand || search)
 
+  /* Pagination links keep the current filters and only change `page`, so the address
+     they point at is the one the server canonicalises the filtered view to. */
+  const pageHref = (next: number) => {
+    const query = new URLSearchParams(params)
+    if (next <= 1) query.delete('page')
+    else query.set('page', String(next))
+    const search = query.toString()
+    return search ? `/collections?${search}` : '/collections'
+  }
+
   const labelClass =
     'mb-1.5 block text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant'
 
@@ -299,7 +309,7 @@ export function CollectionsPage() {
           <Pagination
             page={productPage}
             totalPages={productTotalPages}
-            onChange={(next) => update({ page: String(next) })}
+            hrefFor={pageHref}
           />
         </Container>
       </Section>

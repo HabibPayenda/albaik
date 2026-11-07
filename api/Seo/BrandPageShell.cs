@@ -65,13 +65,14 @@ public static class BrandPageShell
             ?? SeoUrl.Asset(site.BaseUrl, brand.LogoUrl)
             ?? SeoUrl.Absolute(site.BaseUrl, OpenGraphImagePath);
 
-        var breadcrumb = SeoJsonLd.BreadcrumbList(canonicalUrl, new (string, string?)[]
+        var crumbs = new SeoCrumb[]
         {
-            ("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
-            ("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),
-            (category.Name, SeoUrl.Absolute(site.BaseUrl, $"/collections/{category.Slug}")),
-            (brand.Name, canonicalUrl),
-        });
+            new("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
+            new("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),
+            new(category.Name, SeoUrl.Absolute(site.BaseUrl, $"/collections/{category.Slug}")),
+            new(brand.Name, canonicalUrl),
+        };
+        var breadcrumb = SeoBreadcrumb.JsonLd(canonicalUrl, crumbs);
 
         var structuredData = SeoJsonLd.Graph(
             SeoJsonLd.SiteNodes(site)
@@ -92,14 +93,19 @@ public static class BrandPageShell
             OpenGraphImageHeight,
             brand.Name,
             structuredData,
-            BuildContentHtml(site, brand, category, products));
+            BuildContentHtml(site, brand, category, products, crumbs));
     }
 
     private static string BuildContentHtml(
-        SiteSettingsSnapshot site, Brand brand, Category category, List<Product> products)
+        SiteSettingsSnapshot site,
+        Brand brand,
+        Category category,
+        List<Product> products,
+        IReadOnlyList<SeoCrumb> crumbs)
     {
         var sb = new StringBuilder();
         sb.Append("<div class=\"seo-brand\">");
+        sb.Append(SeoBreadcrumb.Html(crumbs));
 
         sb.Append("<header>");
         sb.Append("<h1>").Append(SeoHtml.Text(brand.Name)).Append("</h1>");

@@ -98,4 +98,27 @@ internal static class SeoShellTestHelpers
 
     public static void AssertSingleH1(string html)
         => Assert.Single(Regex.Matches(html, "<h1\\b", RegexOptions.IgnoreCase).Cast<Match>());
+
+    /// <summary>
+    /// The body of the visible landmark with the given <c>aria-label</c> (for example
+    /// "Breadcrumb" or "Pagination"). Failing when it is absent keeps the tests tied to
+    /// the accessible markup a crawler and a screen reader both receive.
+    /// </summary>
+    public static string NavBody(string html, string ariaLabel)
+    {
+        var match = Regex.Match(
+            html,
+            $"<nav\\b[^>]*aria-label\\s*=\\s*['\"]{Regex.Escape(ariaLabel)}['\"][^>]*>(?<body>.*?)</nav>",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        Assert.True(match.Success, $"a nav landmark labelled '{ariaLabel}' must be present");
+        return match.Groups["body"].Value;
+    }
+
+    /// <summary>The decoded <c>href</c> of every anchor inside a landmark, in order.</summary>
+    public static List<string> NavHrefs(string html, string ariaLabel) =>
+        Regex.Matches(NavBody(html, ariaLabel), "<a\\b[^>]*>", RegexOptions.IgnoreCase)
+            .Select(match => Attr(match.Value, "href"))
+            .Where(href => href is not null)
+            .Select(href => WebUtility.HtmlDecode(href!))
+            .ToList();
 }

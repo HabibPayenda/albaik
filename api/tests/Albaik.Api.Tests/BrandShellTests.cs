@@ -75,6 +75,10 @@ public class BrandShellTests : IClassFixture<AlbaikApiFactory>
                 "http://localhost/collections/hair-care/albaik",
             },
             items.Select(i => SeoShellTestHelpers.Str(i, "item")));
+
+        Assert.Equal(
+            items.Select(i => SeoShellTestHelpers.Str(i, "item")),
+            SeoShellTestHelpers.NavHrefs(html, "Breadcrumb"));
     }
 
     [Fact]

@@ -110,6 +110,12 @@ public class ProductShellTests : IClassFixture<AlbaikApiFactory>
                 canonical,
             },
             items.Select(i => SeoShellTestHelpers.Str(i, "item")));
+
+        // The visible breadcrumb is a real landmark whose links address exactly the
+        // URLs the BreadcrumbList names, so humans and crawlers see one hierarchy.
+        Assert.Equal(
+            items.Select(i => SeoShellTestHelpers.Str(i, "item")),
+            SeoShellTestHelpers.NavHrefs(html, "Breadcrumb"));
     }
 
     [Fact]

@@ -14,6 +14,7 @@ import { ButtonAnchor, ButtonLink } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Reveal, Stagger, StaggerItem } from '@/components/ui/Reveal'
 import { ProductCard } from '@/components/ui/ProductCard'
+import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { cn, formatPrice, wasPrice } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
 
@@ -58,7 +59,6 @@ export function ProductPage() {
     () => TABS.map((entry) => ({ ...entry, label: settings.text(`labels.productTab.${entry.key}`, entry.label) })),
     [settings],
   )
-  const activeTab = tabs.find((entry) => entry.key === tab)!
 
   useDocumentTitle(
     product ? `${product.name} — Albaik` : `Product — Albaik`,
@@ -150,6 +150,27 @@ export function ProductPage() {
 
   return (
     <>
+      {/* ---------------------------------------------------------- breadcrumbs */}
+      <div className="w-full border-b border-outline-variant/30 bg-surface-container-lowest">
+        <Container className="py-3">
+          <Breadcrumb
+            items={[
+              { label: 'Home', to: '/' },
+              { label: 'Collections', to: '/collections' },
+              {
+                label: product.categoryName ?? 'Collection',
+                to: `/collections/${product.categorySlug}`,
+              },
+              {
+                label: product.brandName ?? 'Brand',
+                to: `/collections/${product.categorySlug}/${product.brandSlug}`,
+              },
+              { label: product.name },
+            ]}
+          />
+        </Container>
+      </div>
+
       {/* -------------------------------------------------------------- detail */}
       <section className="w-full border-b border-outline-variant/30 bg-surface-container-low pt-space-md pb-space-lg">
         <Container>
@@ -401,68 +422,77 @@ export function ProductPage() {
             </div>
 
             <div className="rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-space-lg shadow-e1">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tab}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3, ease: EASE }}
-                >
-                  {tab === 'benefits' ? (
-                    <div className="flex flex-col gap-space-sm">
-                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">
-                        {activeTab.label}
-                      </h2>
-                      {product.benefits.length ? (
-                        <ul className="flex flex-col gap-2">
-                          {product.benefits.map((benefit) => (
-                            <li key={benefit} className="flex items-start justify-center gap-2.5 text-body-md text-on-surface-variant md:justify-start">
-                              <Icon name="check_circle" size={17} className="mt-0.5 shrink-0 text-secondary" />
-                              {benefit}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-body-md text-on-surface-variant">
-                          Benefit statements for this product have not been published yet.
+              {/*
+               * All three panels stay mounted. The inactive ones use the `hidden`
+               * attribute rather than being unmounted, so the benefits, usage and safety
+               * copy is present in the DOM for crawlers, assistive technology and the
+               * no-JavaScript first render — the same copy the server shell emits.
+               */}
+              {tabs.map((item) => {
+                const isActive = tab === item.key
+                return (
+                  <motion.div
+                    key={item.key}
+                    hidden={!isActive}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+                    transition={{ duration: 0.3, ease: EASE }}
+                  >
+                    {item.key === 'benefits' ? (
+                      <div className="flex flex-col gap-space-sm">
+                        <h2 className="font-display text-headline-sm font-semibold text-on-surface">
+                          {item.label}
+                        </h2>
+                        {product.benefits.length ? (
+                          <ul className="flex flex-col gap-2">
+                            {product.benefits.map((benefit) => (
+                              <li key={benefit} className="flex items-start justify-center gap-2.5 text-body-md text-on-surface-variant md:justify-start">
+                                <Icon name="check_circle" size={17} className="mt-0.5 shrink-0 text-secondary" />
+                                {benefit}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-body-md text-on-surface-variant">
+                            Benefit statements for this product have not been published yet.
+                          </p>
+                        )}
+                        <p className="mt-space-sm rounded-xl border-l-[3px] border-accent-gold bg-surface-container-low p-space-sm text-body-sm text-on-surface-variant">
+                          Ingredient lists, percentages, certifications and performance claims are published only from
+                          approved official product documentation.
                         </p>
-                      )}
-                      <p className="mt-space-sm rounded-xl border-l-[3px] border-accent-gold bg-surface-container-low p-space-sm text-body-sm text-on-surface-variant">
-                        Ingredient lists, percentages, certifications and performance claims are published only from
-                        approved official product documentation.
-                      </p>
-                    </div>
-                  ) : null}
+                      </div>
+                    ) : null}
 
-                  {tab === 'usage' ? (
-                    <div className="flex flex-col gap-space-sm">
-                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">{activeTab.label}</h2>
-                      <p className="text-body-md leading-relaxed text-on-surface-variant">
-                        {product.howToUse ??
-                          'Usage instructions for this product have not been published yet.'}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {tab === 'safety' ? (
-                    <div className="flex flex-col gap-space-sm">
-                      <h2 className="font-display text-headline-sm font-semibold text-on-surface">
-                        Safety information
-                      </h2>
-                      <p className="text-body-md leading-relaxed text-on-surface-variant">
-                        {product.safetyNote ?? 'Safety information has not been published yet.'}
-                      </p>
-                      {product.suitableFor ? (
-                        <p className="text-body-sm text-on-surface-variant">
-                          <span className="font-semibold text-on-surface">Suitable for: </span>
-                          {product.suitableFor}
+                    {item.key === 'usage' ? (
+                      <div className="flex flex-col gap-space-sm">
+                        <h2 className="font-display text-headline-sm font-semibold text-on-surface">{item.label}</h2>
+                        <p className="text-body-md leading-relaxed text-on-surface-variant">
+                          {product.howToUse ??
+                            'Usage instructions for this product have not been published yet.'}
                         </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </motion.div>
-              </AnimatePresence>
+                      </div>
+                    ) : null}
+
+                    {item.key === 'safety' ? (
+                      <div className="flex flex-col gap-space-sm">
+                        <h2 className="font-display text-headline-sm font-semibold text-on-surface">
+                          Safety information
+                        </h2>
+                        <p className="text-body-md leading-relaxed text-on-surface-variant">
+                          {product.safetyNote ?? 'Safety information has not been published yet.'}
+                        </p>
+                        {product.suitableFor ? (
+                          <p className="text-body-sm text-on-surface-variant">
+                            <span className="font-semibold text-on-surface">Suitable for: </span>
+                            {product.suitableFor}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
         </Container>

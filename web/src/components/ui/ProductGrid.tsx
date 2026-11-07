@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { ProductCard, ProductCardSkeleton } from './ProductCard'
 import { EmptyState } from './Feedback'
-import { Button } from './Button'
+import { ButtonLink } from './Button'
 import { EASE } from '@/lib/motion'
 import type { ProductCard as ProductCardModel } from '@/lib/types'
 
@@ -119,15 +120,23 @@ export function ResultsBar({
   )
 }
 
-/** Simple pagination control. */
+/**
+ * Pagination built from real links.
+ *
+ * Each control is an `<a href>` produced by `hrefFor`, carrying the `page` query
+ * parameter alongside whatever filters are already active. That makes the control work
+ * without JavaScript and lets a crawler walk older Products; the styles are the ones the
+ * previous button-based control used.
+ */
 export function Pagination({
   page,
   totalPages,
-  onChange,
+  hrefFor,
 }: {
   page: number
   totalPages: number
-  onChange: (page: number) => void
+  /** Builds the address of a target page, preserving the other current query params. */
+  hrefFor: (page: number) => string
 }) {
   if (totalPages <= 1) return null
 
@@ -135,11 +144,20 @@ export function Pagination({
     (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
   )
 
+  const disabledClass =
+    'inline-flex items-center justify-center rounded-lg bg-surface-container-highest px-3.5 py-2 text-label-md font-semibold text-on-surface opacity-50'
+
   return (
     <nav className="mt-space-xl flex items-center justify-center gap-2" aria-label="Pagination">
-      <Button variant="subtle" size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-        Previous
-      </Button>
+      {page > 1 ? (
+        <ButtonLink to={hrefFor(page - 1)} variant="subtle" size="sm">
+          Previous
+        </ButtonLink>
+      ) : (
+        <span aria-disabled="true" className={disabledClass}>
+          Previous
+        </span>
+      )}
 
       {pages.map((p, index) => {
         const previous = pages[index - 1]
@@ -147,25 +165,30 @@ export function Pagination({
         return (
           <span key={p} className="flex items-center gap-2">
             {gap ? <span className="text-on-surface-variant">…</span> : null}
-            <button
-              type="button"
-              onClick={() => onChange(p)}
+            <Link
+              to={hrefFor(p)}
               aria-current={p === page ? 'page' : undefined}
               className={
                 p === page
-                  ? 'size-9 rounded-lg bg-royal-gradient-compact text-label-md font-bold text-white'
-                  : 'size-9 rounded-lg text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface'
+                  ? 'flex size-9 items-center justify-center rounded-lg bg-royal-gradient-compact text-label-md font-bold text-white'
+                  : 'flex size-9 items-center justify-center rounded-lg text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface'
               }
             >
               {p}
-            </button>
+            </Link>
           </span>
         )
       })}
 
-      <Button variant="subtle" size="sm" disabled={page >= totalPages} onClick={() => onChange(page + 1)}>
-        Next
-      </Button>
+      {page < totalPages ? (
+        <ButtonLink to={hrefFor(page + 1)} variant="subtle" size="sm">
+          Next
+        </ButtonLink>
+      ) : (
+        <span aria-disabled="true" className={disabledClass}>
+          Next
+        </span>
+      )}
     </nav>
   )
 }

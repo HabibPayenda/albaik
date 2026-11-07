@@ -51,10 +51,21 @@ public static class CollectionPageShell
         var description = SeoText.ComposeDescription(
             string.IsNullOrWhiteSpace(category.Description) ? category.Tagline : category.Description);
 
+        var crumbs = new SeoCrumb[]
+        {
+            new("Home", SeoUrl.Absolute(site.BaseUrl, "/")),
+            new("Collections", SeoUrl.Absolute(site.BaseUrl, "/collections")),
+            new(category.Name, canonicalUrl),
+        };
         var itemList = products.Select(p =>
             (p.Name, SeoUrl.Absolute(site.BaseUrl, $"/products/{p.Slug}")));
         var structuredData = SeoJsonLd.Graph(
-            SeoJsonLd.SiteNodes(site).Concat(new object[] { SeoJsonLd.ItemList(canonicalUrl, itemList) })
+            SeoJsonLd.SiteNodes(site)
+                .Concat(new object[]
+                {
+                    SeoJsonLd.ItemList(canonicalUrl, itemList),
+                    SeoBreadcrumb.JsonLd(canonicalUrl, crumbs),
+                })
                 .ToArray());
 
         return new SeoPage(
@@ -71,14 +82,18 @@ public static class CollectionPageShell
             OpenGraphImageSize,
             category.Name,
             structuredData,
-            BuildContentHtml(category, brands, products));
+            BuildContentHtml(category, brands, products, crumbs));
     }
 
     private static string BuildContentHtml(
-        Category category, List<Brand> brands, List<Product> products)
+        Category category,
+        List<Brand> brands,
+        List<Product> products,
+        IReadOnlyList<SeoCrumb> crumbs)
     {
         var sb = new StringBuilder();
         sb.Append("<div class=\"seo-collection\">");
+        sb.Append(SeoBreadcrumb.Html(crumbs));
 
         sb.Append("<header>");
         sb.Append("<h1>").Append(SeoHtml.Text(category.Name)).Append("</h1>");

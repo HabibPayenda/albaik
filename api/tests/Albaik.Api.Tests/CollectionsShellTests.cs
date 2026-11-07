@@ -121,6 +121,45 @@ public class CollectionsShellTests : IClassFixture<AlbaikApiFactory>
         Assert.Equal(
             products.Select(p => $"http://localhost/products/{p.Slug}"),
             items.Select(i => Str(i, "url")));
+
+        // A Collection carries Home > Collections > Collection, visible and in JSON-LD.
+        var breadcrumb = Assert.Single(
+            SeoShellTestHelpers.GraphNodes(html), node => Str(node, "@type") == "BreadcrumbList");
+        var crumbs = breadcrumb.GetProperty("itemListElement").EnumerateArray().ToList();
+        Assert.Equal(
+            new[] { "Home", "Collections", category.Name },
+            crumbs.Select(i => Str(i, "name")));
+        Assert.Equal(
+            new[]
+            {
+                "http://localhost/",
+                "http://localhost/collections",
+                $"http://localhost/collections/{category.Slug}",
+            },
+            crumbs.Select(i => Str(i, "item")));
+        Assert.Equal(
+            crumbs.Select(i => Str(i, "item")),
+            SeoShellTestHelpers.NavHrefs(html, "Breadcrumb"));
+    }
+
+    [Fact]
+    public async Task CollectionsIndex_RendersCrawlablePaginationLinks()
+    {
+        using var client = _factory.CreateClient();
+
+        var first = await ReadHtmlAsync(await client.GetAsync("/collections"));
+        var firstPages = SeoShellTestHelpers.NavHrefs(first, "Pagination");
+        Assert.Contains("/collections?page=2", firstPages);
+        Assert.Contains("/collections", firstPages);
+        Assert.Contains(
+            "aria-current=\"page\"", SeoShellTestHelpers.NavBody(first, "Pagination"),
+            StringComparison.OrdinalIgnoreCase);
+
+        // Page two keeps the same query contract and links back to page one.
+        var second = await ReadHtmlAsync(await client.GetAsync("/collections?page=2"));
+        var secondPages = SeoShellTestHelpers.NavHrefs(second, "Pagination");
+        Assert.Contains("/collections", secondPages);
+        Assert.Contains("/collections?page=2", secondPages);
     }
 
     [Fact]
