@@ -82,13 +82,51 @@ export function opensInNewTab(flag: boolean | undefined, path: string) {
 
 export function formatDate(value: string | Date, withTime = false) {
   const date = typeof value === 'string' ? new Date(value) : value
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '�?"'
   return date.toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
   })
+}
+
+/**
+ * A timestamp in the viewer's browser timezone. The API sends UTC with a trailing Z,
+ * so the conversion is correct. An explicit IANA zone can be supplied for a known
+ * contact, with a safe fallback to the browser zone.
+ */
+export function formatLocalDateTime(value: string | Date, timeZone?: string | null) {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return '�?"'
+
+  const options: Intl.DateTimeFormatOptions = {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }
+
+  if (timeZone) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', { ...options, timeZone }).format(date)
+    } catch {
+      // Unknown IANA zone: fall back to the browser's local zone.
+    }
+  }
+
+  return new Intl.DateTimeFormat('en-GB', options).format(date)
+}
+
+/** The viewer's browser timezone, used only as a human-readable label. */
+export function localTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone
+  } catch {
+    return undefined
+  }
 }
 
 /** "Soraya Noori" -> "SN" */
