@@ -80,6 +80,29 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
+        // WhatsApp channels are a social profile, not a phone number. The row is added
+        // for upgraded databases whose social tab predates it.
+        if (!await db.SiteSettings.AnyAsync(s => s.Key == "social.whatsapp"))
+        {
+            db.SiteSettings.Add(S("social.whatsapp", "", "social", "WhatsApp channel URL", "url"));
+            await db.SaveChangesAsync();
+        }
+
+        // A WhatsApp channel URL was previously stored in the LinkedIn field by mistake.
+        // Move it to the correct row once; a real LinkedIn URL is left untouched.
+        var whatsappSetting = await db.SiteSettings.FirstOrDefaultAsync(s => s.Key == "social.whatsapp");
+        var linkedInSetting = await db.SiteSettings.FirstOrDefaultAsync(s => s.Key == "social.linkedin");
+        var linkedInValue = linkedInSetting?.Value?.Trim() ?? "";
+        if (whatsappSetting is not null
+            && string.IsNullOrWhiteSpace(whatsappSetting.Value)
+            && (linkedInValue.Contains("whatsapp.com", StringComparison.OrdinalIgnoreCase)
+                || linkedInValue.Contains("wa.me", StringComparison.OrdinalIgnoreCase)))
+        {
+            whatsappSetting.Value = linkedInValue;
+            linkedInSetting!.Value = "";
+            await db.SaveChangesAsync();
+        }
+
         if (await db.Categories.AnyAsync()) return;
 
         logger.LogInformation("Seeding Albaik catalogue and content…");

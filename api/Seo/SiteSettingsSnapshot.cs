@@ -58,7 +58,7 @@ public sealed record SiteSettingsSnapshot(
             baseUrl = $"{request.Scheme}://{request.Host}".TrimEnd('/');
         }
 
-        var sameAs = new[] { "social.facebook", "social.instagram", "social.tiktok", "social.linkedin" }
+        var sameAs = new[] { "social.facebook", "social.instagram", "social.tiktok", "social.whatsapp", "social.linkedin" }
             .Select(key => Value(key))
             .Where(url => url.Length > 0)
             .ToList();

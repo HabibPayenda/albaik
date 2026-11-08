@@ -74,7 +74,6 @@ export default function LoginPage() {
               autoComplete="username"
               autoFocus
               required
-              placeholder="admin"
             />
           </Field>
 
@@ -86,7 +85,6 @@ export default function LoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
               required
-              placeholder="••••••••"
             />
           </Field>
 
@@ -100,20 +98,6 @@ export default function LoginPage() {
           <Button type="submit" variant="primary" size="lg" icon="lock" loading={status === 'loading'} block>
             Sign in
           </Button>
-
-          <div className="rounded-xl border border-outline-variant/50 bg-surface-container-low p-space-sm">
-            <p className="text-label-md font-semibold uppercase tracking-wider text-on-surface-variant">
-              Seeded credentials
-            </p>
-            <p className="mt-1 text-body-sm text-on-surface-variant">
-              Username <code className="rounded bg-surface-container-high px-1.5 py-0.5 font-mono text-on-surface">admin</code>{' '}
-              · Password{' '}
-              <code className="rounded bg-surface-container-high px-1.5 py-0.5 font-mono text-on-surface">Albaik@2026</code>
-            </p>
-            <p className="mt-1 text-label-sm text-on-surface-variant">
-              Change this from Settings → Security after your first sign-in.
-            </p>
-          </div>
 
           {/*
             `min-h-6` is not decoration: with no vertical padding this link's box was

@@ -389,8 +389,10 @@ export default function SettingsPage() {
                           ? 'Paste the src URL from Google Maps → Share → Embed a map, or the whole embed code — either works.'
                           : row.key === 'catalog.priceOnRequest'
                             ? 'Shown in place of a price when a product has none set.'
-                            : row.key.startsWith('social.')
-                              ? 'Full profile URL — e.g. https://instagram.com/albaik. A bare domain works too.'
+                            : row.key === 'social.whatsapp'
+                              ? 'Paste the WhatsApp channel link, e.g. https://whatsapp.com/channel/...'
+                              : row.key.startsWith('social.')
+                                ? 'Full profile URL — e.g. https://instagram.com/albaik. A bare domain works too.'
                               : undefined
                     }
                   >

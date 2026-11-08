@@ -156,6 +156,7 @@ public class SmtpEmailSender : IEmailSender
             ("social.facebook", "Facebook"),
             ("social.instagram", "Instagram"),
             ("social.tiktok", "TikTok"),
+            ("social.whatsapp", "WhatsApp Channel"),
             ("social.linkedin", "LinkedIn"),
         }
         .Select(item => (item.Label, Url: Value(item.Key)))
