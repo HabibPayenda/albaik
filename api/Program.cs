@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Albaik.Api.Data;
 using Albaik.Api.Seo;
+using Albaik.Api.Serialization;
 using Albaik.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,9 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    // Database timestamps are UTC but MySQL returns them without a Kind. Emit the Z so
+    // the dashboard can convert them to the viewer's local time correctly.
+    o.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
 });
 
 builder.Services.AddOpenApi();

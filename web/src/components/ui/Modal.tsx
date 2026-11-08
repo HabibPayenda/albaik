@@ -14,6 +14,8 @@ export function Modal({
   footer,
   size = 'md',
   className,
+  header,
+  bodyClassName,
 }: {
   open: boolean
   onClose: () => void
@@ -23,6 +25,10 @@ export function Modal({
   footer?: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
+  /** Replaces the standard title bar. The custom header is responsible for a close button. */
+  header?: React.ReactNode
+  /** Extra classes for the scrollable body, e.g. p-0 for a full-bleed layout. */
+  bodyClassName?: string
 }) {
   // Close on Escape and lock background scroll while open.
   useEffect(() => {
@@ -71,7 +77,9 @@ export function Modal({
               className,
             )}
           >
-            {title ? (
+            {header ? (
+              <div className="shrink-0">{header}</div>
+            ) : title ? (
               <header className="flex items-start justify-between gap-space-md border-b border-outline-variant/40 px-space-lg py-space-md">
                 <div className="flex flex-col gap-0.5">
                   <h2 className="font-display text-headline-sm font-semibold text-on-surface">{title}</h2>
@@ -90,7 +98,9 @@ export function Modal({
               </header>
             ) : null}
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-space-lg py-space-md">{children}</div>
+            <div className={cn('min-h-0 flex-1 overflow-y-auto px-space-lg py-space-md', bodyClassName)}>
+              {children}
+            </div>
 
             {footer ? (
               <footer className="flex flex-wrap items-center justify-end gap-space-sm border-t border-outline-variant/40 bg-surface-container-low/50 px-space-lg py-space-md">

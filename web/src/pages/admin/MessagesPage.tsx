@@ -7,28 +7,15 @@ import { AdminCard, AdminPageHeader, AdminToolbar } from '@/components/admin/Adm
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Field, Select, TextArea, TextInput } from '@/components/ui/Field'
-import { Chip, type Accent } from '@/components/ui/Badge'
+import { Chip } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/Feedback'
 import { api, endpoints, errorMessage } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import { EASE } from '@/lib/motion'
+import { MessageDetailModal } from '@/components/admin/MessageDetailModal'
+import { KIND_ACCENT, KIND_LABEL } from '@/lib/messageMeta'
 import type { ContactMessage, ContactMessageReply } from '@/lib/types'
-
-const KIND_LABEL: Record<string, string> = {
-  contact: 'General',
-  wholesale: 'Wholesale',
-  product: 'Product enquiry',
-  newsletter: 'Mailing list',
-}
-
-/** One pill accent per kind, so the four enquiry types are distinguishable at a glance. */
-const KIND_ACCENT: Record<string, Accent> = {
-  contact: 'neutral',
-  wholesale: 'secondary',
-  product: 'primary',
-  newsletter: 'teal',
-}
 
 export default function MessagesPage() {
   const dispatch = useAppDispatch()
@@ -289,156 +276,23 @@ export default function MessagesPage() {
       </AdminCard>
 
       {/* ---------------------------------------------------------- detail modal */}
-      <Modal
-        open={Boolean(open)}
+      <MessageDetailModal
+        message={open}
+        replies={replies}
+        repliesLoading={repliesLoading}
         onClose={() => setOpen(null)}
-        title={open ? `Message from ${open.name}` : undefined}
-        description={open ? `${open.email}${open.phone ? ` · ${open.phone}` : ''}` : undefined}
-        size="lg"
-        footer={
-          <>
-            <Button
-              variant="danger"
-              icon="delete"
-              onClick={() => open && setPendingDelete(open)}
-              className="mr-auto"
-            >
-              Delete
-            </Button>
-            <Button variant="ghost" onClick={() => setOpen(null)}>
-              Close
-            </Button>
-            {open ? (
-              <Button variant="primary" icon="mail" onClick={() => startReply(open)}>
-                Reply by email
-              </Button>
-            ) : null}
-          </>
-        }
-      >
-        {open ? (
-          <div className="flex flex-col gap-space-md">
-            <dl className="grid grid-cols-1 gap-space-sm sm:grid-cols-2">
-              {[
-                { label: 'Type', value: KIND_LABEL[open.kind] ?? open.kind },
-                { label: 'Received', value: formatDate(open.createdAt, true) },
-                { label: 'Subject', value: open.subject ?? '—' },
-                { label: 'Company', value: open.company ?? '—' },
-                { label: 'Phone', value: open.phone ?? '—' },
-                {
-                  label: 'Email delivery',
-                  value: open.emailDelivered ? 'Delivered to your inbox' : 'Not delivered - see settings',
-                },
-                {
-                  label: 'Your replies',
-                  value:
-                    open.replyCount > 0
-                      ? `${open.replyCount} - last ${formatDate(open.repliedAt!, true)}`
-                      : 'None yet',
-                },
-                {
-                  label: 'Customer replies',
-                  value:
-                    open.customerReplyCount > 0
-                      ? `${open.customerReplyCount} - last ${formatDate(open.lastCustomerReplyAt!, true)}`
-                      : 'None yet',
-                },
-              ].map((row) => (
-                <div key={row.label} className="flex flex-col rounded-xl bg-surface-container-low p-space-sm">
-                  <dt className="text-label-md font-semibold uppercase tracking-wider text-on-surface-variant">
-                    {row.label}
-                  </dt>
-                  <dd className="text-body-sm text-on-surface">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            {!open.emailDelivered && open.deliveryError ? (
-              <div className="flex items-start gap-2 rounded-xl border border-error-container bg-error-container/40 p-space-sm">
-                <Icon name="warning" size={16} className="mt-0.5 shrink-0 text-error" />
-                <p className="text-body-sm text-on-error-container">{open.deliveryError}</p>
-              </div>
-            ) : null}
-
-            <div className="rounded-xl border-l-[3px] border-secondary bg-surface-container-low p-space-md">
-              <p className="whitespace-pre-wrap text-body-md leading-relaxed text-on-surface">{open.message}</p>
-            </div>
-
-            <div className="flex flex-col gap-space-sm">
-              <p className="text-label-md font-semibold uppercase tracking-wider text-on-surface-variant">
-                Conversation
-              </p>
-              {repliesLoading ? (
-                <div className="skeleton h-16 w-full rounded-xl" />
-              ) : replies.length ? (
-                replies.map((reply) => (
-                  <div
-                    key={reply.id}
-                    className="rounded-xl border border-outline-variant/40 bg-water-foam/40 p-space-sm"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-body-sm font-semibold text-on-surface">{reply.subject}</span>
-                      <span className="text-label-sm text-on-surface-variant/70">
-                        {formatDate(reply.sentAt, true)}
-                      </span>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap text-body-sm leading-relaxed text-on-surface">
-                      {reply.body}
-                    </p>
-                    <p className="mt-2 text-label-sm text-on-surface-variant/70">
-                      {reply.source === 'customer'
-                        ? 'Received from the customer'
-                        : reply.source === 'phone'
-                          ? 'Synchronised from your email app'
-                          : 'Sent from the dashboard'}{' '}
-                      - {reply.toAddress}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-body-sm text-on-surface-variant">
-                  No replies yet. Use <strong>Reply by email</strong> to send one; it will appear here.
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-space-sm">
-              <Button
-                variant="outline"
-                icon="copy"
-                onClick={() => {
-                  navigator.clipboard?.writeText(open.email)
-                  dispatch(pushToast({ tone: 'success', title: 'Email copied' }))
-                }}
-              >
-                Copy email
-              </Button>
-              {open.phone ? (
-                <Button
-                  variant="outline"
-                  icon="whatsapp"
-                  onClick={() =>
-                    window.open(`https://wa.me/${open.phone!.replace(/[^\d]/g, '')}`, '_blank')
-                  }
-                >
-                  WhatsApp
-                </Button>
-              ) : null}
-              <Button
-                variant="subtle"
-                icon={open.isRead ? 'visibility' : 'check'}
-                onClick={() => {
-                  dispatch(markMessageRead({ id: open.id, read: !open.isRead }))
-                  setOpen({ ...open, isRead: !open.isRead })
-                }}
-              >
-                Mark as {open.isRead ? 'unread' : 'read'}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
+        onReply={startReply}
+        onAskDelete={setPendingDelete}
+        onToggleRead={(message) => {
+          dispatch(markMessageRead({ id: message.id, read: !message.isRead }))
+          setOpen({ ...message, isRead: !message.isRead })
+        }}
+        onCopyEmail={(email) => {
+          navigator.clipboard?.writeText(email)
+          dispatch(pushToast({ tone: 'success', title: 'Email copied' }))
+        }}
+        onWhatsApp={(phone) => window.open(`https://wa.me/${phone.replace(/[^\d]/g, '')}`, '_blank')}
+      />
       {/* ---------------------------------------------------------- reply composer */}
       <Modal
         open={Boolean(reply)}
