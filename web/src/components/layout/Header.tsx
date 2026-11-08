@@ -8,7 +8,6 @@ import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { cn, opensInNewTab } from '@/lib/utils'
 import { Icon } from '@/components/ui/Icon'
 import { BrandMark } from '@/components/ui/BrandMark'
-import { LocaleSwitcher } from './LocaleSwitcher'
 import { EASE } from '@/lib/motion'
 import type { Brand } from '@/lib/types'
 
@@ -62,9 +61,8 @@ function useBrandsByCategory(): Map<string, Brand[]> {
  * 3. **Fewer controls.** The bar previously carried seven nav items plus a language
  *    switcher, search, a shopping-bag icon (there is no cart), a "Find Retailer"
  *    button and an admin link. The bag and the admin link are gone. The language
- *    switcher is back (see `LocaleSwitcher`) but now drives the i18n provider and
- *    falls back to English for any untranslated string, so it never silently leaves
- *    the page half-translated.
+ *    switcher is intentionally not rendered for now; the i18n provider remains in
+ *    place and still falls back to English for any untranslated string.
  *
  * The Collections panel is reachable three ways: pointer hover, click-through to the
  * collection index, and the keyboard (`focus` opens it, `ArrowDown` steps into it,
@@ -285,8 +283,6 @@ export function Header() {
 
           {/* ----------------------------------------------------------- right */}
           <div className="flex shrink-0 items-center gap-1.5">
-            <LocaleSwitcher variant="inline" />
-
             <button
               type="button"
               onClick={() => dispatch(toggleSearch(true))}
@@ -616,8 +612,6 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
             </nav>
 
             <div className="flex flex-col gap-space-sm border-t border-white/10 p-space-md">
-              <LocaleSwitcher variant="block" />
-
               <button
                 type="button"
                 onClick={() => {

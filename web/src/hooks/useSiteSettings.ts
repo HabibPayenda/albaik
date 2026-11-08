@@ -38,6 +38,7 @@ export function useSiteSettings() {
       instagram: settings['social.instagram'] || '',
       tiktok: settings['social.tiktok'] || '',
       linkedin: settings['social.linkedin'] || '',
+      whatsappChannel: settings['social.whatsapp'] || '',
 
       showPrices: isTruthy(settings['catalog.showPrices'], true),
       priceOnRequest: settings['catalog.priceOnRequest'] || 'Price on request',

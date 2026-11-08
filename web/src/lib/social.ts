@@ -5,7 +5,7 @@
  * nothing under `lib/` imports from `components/` — that edge runs the other way round,
  * so the icon registry consumes this type rather than the reverse.
  */
-export type SocialKey = 'facebook' | 'instagram' | 'linkedin' | 'tiktok'
+export type SocialKey = 'facebook' | 'instagram' | 'whatsapp' | 'linkedin' | 'tiktok'
 
 /**
  * Turn a configured social link into a usable href.
@@ -41,12 +41,13 @@ export function socialUrl(value?: string | null): string {
   }
 }
 
-/** The four networks the dashboard can hold a URL for, in the order they are shown. */
+/** The networks the dashboard can hold a URL for, in the order they are shown. */
 const NETWORKS = [
   { key: 'facebook', label: 'Facebook' },
   { key: 'instagram', label: 'Instagram' },
-  { key: 'linkedin', label: 'LinkedIn' },
   { key: 'tiktok', label: 'TikTok' },
+  { key: 'whatsapp', label: 'WhatsApp Channel' },
+  { key: 'linkedin', label: 'LinkedIn' },
 ] as const satisfies readonly { key: SocialKey; label: string }[]
 
 export interface ConfiguredSocial {
@@ -61,6 +62,7 @@ export interface SocialSettings {
   instagram: string
   linkedin: string
   tiktok: string
+  whatsappChannel: string
 }
 
 /**
@@ -76,6 +78,7 @@ export function configuredSocials(settings: SocialSettings): ConfiguredSocial[] 
     instagram: socialUrl(settings.instagram),
     linkedin: socialUrl(settings.linkedin),
     tiktok: socialUrl(settings.tiktok),
+    whatsapp: socialUrl(settings.whatsappChannel),
   }
 
   return NETWORKS.flatMap(({ key, label }) => (hrefs[key] ? [{ key, href: hrefs[key], label }] : []))
